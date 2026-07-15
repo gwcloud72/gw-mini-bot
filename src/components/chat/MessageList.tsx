@@ -1,5 +1,5 @@
 import { ArrowDown } from 'lucide-react';
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatConversationDate } from '@/lib/chat';
 import type { ChatMessage } from '@/types/chat';
 import { ConversationIntro } from './ConversationIntro';
@@ -24,44 +24,89 @@ export function MessageList({
   onRetryMessage,
 }: MessageListProps) {
   const messageViewportRef = useRef<HTMLDivElement>(null);
+  const messageStageRef = useRef<HTMLDivElement>(null);
   const isViewportPinnedRef = useRef(true);
   const previousMessageCountRef = useRef(chatMessages.length);
+  const scheduledScrollFrameRef = useRef<number | null>(null);
   const [isJumpButtonVisible, setIsJumpButtonVisible] = useState(false);
   const visibleMessages = chatMessages.filter(
     (chatMessage) => !chatMessage.isWelcome,
   );
   const hasConversationMessages = visibleMessages.length > 0;
 
-  const scrollToLatestMessage = useCallback(
-    (preferredBehavior: ScrollBehavior = 'smooth') => {
-      const messageViewport = messageViewportRef.current;
-      if (!messageViewport) {
-        return;
-      }
+  const hideJumpButton = useCallback(() => {
+    setIsJumpButtonVisible((isVisible) => (isVisible ? false : isVisible));
+  }, []);
 
-      messageViewport.scrollTo({
-        top: messageViewport.scrollHeight,
-        behavior: getAccessibleScrollBehavior(preferredBehavior),
-      });
+  const scrollToLatestImmediately = useCallback(() => {
+    const messageViewport = messageViewportRef.current;
+    if (!messageViewport || !isViewportPinnedRef.current) {
+      return;
+    }
+
+    messageViewport.scrollTop = messageViewport.scrollHeight;
+    hideJumpButton();
+  }, [hideJumpButton]);
+
+  const schedulePinnedScroll = useCallback(() => {
+    if (
+      scheduledScrollFrameRef.current !== null ||
+      !isViewportPinnedRef.current
+    ) {
+      return;
+    }
+
+    scheduledScrollFrameRef.current = window.requestAnimationFrame(() => {
+      scheduledScrollFrameRef.current = null;
+      scrollToLatestImmediately();
+    });
+  }, [scrollToLatestImmediately]);
+
+  const scrollToLatestMessage = useCallback(() => {
+    const messageViewport = messageViewportRef.current;
+    if (!messageViewport) {
+      return;
+    }
+
+    isViewportPinnedRef.current = true;
+    messageViewport.scrollTo({
+      top: messageViewport.scrollHeight,
+      behavior: getAccessibleScrollBehavior('smooth'),
+    });
+    hideJumpButton();
+  }, [hideJumpButton]);
+
+  useEffect(() => {
+    const currentMessageCount = chatMessages.length;
+    if (currentMessageCount !== previousMessageCountRef.current) {
+      previousMessageCountRef.current = currentMessageCount;
       isViewportPinnedRef.current = true;
-      setIsJumpButtonVisible(false);
+      schedulePinnedScroll();
+    }
+  }, [chatMessages.length, schedulePinnedScroll]);
+
+  useEffect(() => {
+    const messageStage = messageStageRef.current;
+    if (!messageStage || typeof ResizeObserver === 'undefined') {
+      return undefined;
+    }
+
+    const messageStageResizeObserver = new ResizeObserver(() => {
+      schedulePinnedScroll();
+    });
+    messageStageResizeObserver.observe(messageStage);
+
+    return () => messageStageResizeObserver.disconnect();
+  }, [schedulePinnedScroll]);
+
+  useEffect(
+    () => () => {
+      if (scheduledScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(scheduledScrollFrameRef.current);
+      }
     },
     [],
   );
-
-  useLayoutEffect(() => {
-    const previousMessageCount = previousMessageCountRef.current;
-    const newlyAddedMessages = chatMessages.slice(previousMessageCount);
-    previousMessageCountRef.current = chatMessages.length;
-
-    if (newlyAddedMessages.some((chatMessage) => chatMessage.role === 'user')) {
-      isViewportPinnedRef.current = true;
-    }
-
-    if (isViewportPinnedRef.current) {
-      scrollToLatestMessage(isStreaming ? 'auto' : 'smooth');
-    }
-  }, [chatMessages, isStreaming, scrollToLatestMessage]);
 
   const handleViewportScroll = () => {
     const messageViewport = messageViewportRef.current;
@@ -73,7 +118,10 @@ export function MessageList({
       messageViewport.scrollHeight - messageViewport.scrollTop - messageViewport.clientHeight;
     const isViewportPinned = distanceFromLatestMessage < 96;
     isViewportPinnedRef.current = isViewportPinned;
-    setIsJumpButtonVisible(!isViewportPinned);
+    setIsJumpButtonVisible((isVisible) => {
+      const shouldShowJumpButton = !isViewportPinned;
+      return isVisible === shouldShowJumpButton ? isVisible : shouldShowJumpButton;
+    });
   };
 
   return (
@@ -88,6 +136,7 @@ export function MessageList({
         aria-busy={isStreaming}
       >
         <div
+          ref={messageStageRef}
           className={`message-stage relative z-[1] mx-auto flex min-h-full w-full max-w-[790px] flex-col ${
             hasConversationMessages ? 'gap-5' : ''
           }`}
@@ -112,7 +161,6 @@ export function MessageList({
                     !isStreaming &&
                     chatMessage.messageKind !== 'daily-quota-notice'
                   }
-                  entranceDelayIndex={Math.min(messageIndex, 5)}
                   onRetryMessage={onRetryMessage}
                 />
               ))}
@@ -126,7 +174,7 @@ export function MessageList({
       {isJumpButtonVisible && (
         <button
           type="button"
-          onClick={() => scrollToLatestMessage()}
+          onClick={scrollToLatestMessage}
           className="jump-button absolute bottom-4 left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full px-3.5 py-2"
         >
           <ArrowDown className="size-3.5" aria-hidden="true" />

@@ -1,4 +1,4 @@
-const TYPING_DOT_DELAYS_MS = [0, 140, 280] as const;
+const TYPING_DOT_DELAYS_MS = [0, 90, 180] as const;
 
 export function TypingIndicator() {
   return (

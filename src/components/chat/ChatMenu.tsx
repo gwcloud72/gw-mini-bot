@@ -1,5 +1,5 @@
 import { RefreshCw, RotateCcw, ShieldCheck, Wifi, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { CHATBOT_DISPLAY_NAME } from '@/constants/chat';
 import type { ChatConnectionState } from '@/types/chat';
 import type { ChatSkinId } from '@/types/skin';
@@ -24,7 +24,7 @@ const CONNECTION_STATUS_LABELS: Record<ChatConnectionState, string> = {
   unconfigured: '설정 필요',
 };
 
-export function ChatMenu({
+export const ChatMenu = memo(function ChatMenu({
   isOpen,
   connectionStatus,
   activeSkinId,
@@ -206,4 +206,4 @@ export function ChatMenu({
       </div>
     </div>
   );
-}
+});

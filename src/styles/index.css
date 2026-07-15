@@ -81,9 +81,9 @@
     --shadow-color-rgb: 41, 35, 42;
 
     --radius-shell: 2rem;
-    --motion-duration-fast: 140ms;
-    --motion-duration-base: 220ms;
-    --motion-duration-slow: 420ms;
+    --motion-duration-fast: 90ms;
+    --motion-duration-base: 150ms;
+    --motion-duration-slow: 260ms;
     --motion-easing-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
     --motion-easing-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -274,6 +274,10 @@
     animation: ambient-breathe 12s ease-in-out infinite alternate;
   }
 
+  .app-backdrop[data-streaming="true"]::before {
+    animation-play-state: paused;
+  }
+
   .chat-shell {
     border: 1px solid color-mix(in srgb, var(--color-border-default) 78%, white);
     background: var(--color-surface-default);
@@ -294,7 +298,7 @@
     transition:
       background-color var(--motion-duration-base) var(--motion-easing-standard),
       border-color var(--motion-duration-base) var(--motion-easing-standard);
-    animation: header-enter 340ms var(--motion-easing-emphasized) 45ms both;
+    animation: header-enter 200ms var(--motion-easing-emphasized) 20ms both;
   }
 
   .brand-avatar {
@@ -371,12 +375,12 @@
 
   .status-dot.is-online {
     background: var(--color-success);
-    animation: status-enter 320ms var(--motion-easing-emphasized) both;
+    animation: status-enter 180ms var(--motion-easing-emphasized) both;
   }
 
   .status-dot.is-checking {
     background: #d29b3f;
-    animation: status-pulse 1.2s ease-in-out infinite;
+    animation: status-pulse 900ms ease-in-out infinite;
   }
 
   .icon-button {
@@ -427,7 +431,7 @@
     color: var(--color-danger-foreground);
     background: var(--color-danger-surface);
     box-shadow: 0 8px 24px rgba(var(--shadow-color-rgb), 0.055);
-    animation: notice-enter 260ms var(--motion-easing-emphasized) both;
+    animation: notice-enter 180ms var(--motion-easing-emphasized) both;
   }
 
   .connection-banner[data-variant="setup"] {
@@ -497,7 +501,7 @@
 
   .conversation-intro {
     min-height: min(650px, 100%);
-    animation: intro-enter 480ms var(--motion-easing-emphasized) 70ms both;
+    animation: intro-enter 260ms var(--motion-easing-emphasized) 30ms both;
   }
 
   .intro-avatar-wrap {
@@ -520,7 +524,7 @@
     color: var(--color-accent-strong);
     background: var(--color-surface-raised);
     box-shadow: 0 8px 18px rgba(var(--shadow-color-rgb), 0.1);
-    animation: sparkle-pop 420ms var(--motion-easing-emphasized) 260ms both;
+    animation: sparkle-pop 240ms var(--motion-easing-emphasized) 100ms both;
   }
 
   .intro-eyebrow {
@@ -548,7 +552,7 @@
   }
 
   .quick-prompts {
-    animation: prompt-group-enter 420ms var(--motion-easing-emphasized) 130ms both;
+    animation: prompt-group-enter 240ms var(--motion-easing-emphasized) 60ms both;
   }
 
   .quick-prompt-heading {
@@ -573,23 +577,23 @@
       box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
       transform var(--motion-duration-fast) var(--motion-easing-emphasized),
       background-color var(--motion-duration-fast) var(--motion-easing-standard);
-    animation: prompt-card-enter 400ms var(--motion-easing-emphasized) both;
+    animation: prompt-card-enter 220ms var(--motion-easing-emphasized) both;
   }
 
   .quick-prompt-delay-0 {
-    animation-delay: 160ms;
+    animation-delay: 60ms;
   }
 
   .quick-prompt-delay-1 {
-    animation-delay: 215ms;
+    animation-delay: 90ms;
   }
 
   .quick-prompt-delay-2 {
-    animation-delay: 270ms;
+    animation-delay: 120ms;
   }
 
   .quick-prompt-delay-3 {
-    animation-delay: 325ms;
+    animation-delay: 150ms;
   }
 
   .quick-prompt::after {
@@ -677,42 +681,17 @@
     color: var(--color-text-muted);
     background: color-mix(in srgb, var(--color-surface-raised) 86%, transparent);
     box-shadow: 0 6px 18px rgba(var(--shadow-color-rgb), 0.045);
-    backdrop-filter: blur(10px);
     font-size: var(--type-size-micro);
     font-weight: var(--type-weight-medium);
     line-height: var(--type-line-height-snug);
     letter-spacing: var(--type-letter-spacing-number);
     font-variant-numeric: tabular-nums;
-    animation: date-enter 300ms var(--motion-easing-emphasized) both;
+    animation: date-enter 160ms var(--motion-easing-emphasized) both;
   }
 
   .message-row {
     transform-origin: bottom left;
-    animation: message-enter 340ms var(--motion-easing-emphasized) both;
-  }
-
-  .message-delay-0 {
-    animation-delay: 30ms;
-  }
-
-  .message-delay-1 {
-    animation-delay: 58ms;
-  }
-
-  .message-delay-2 {
-    animation-delay: 86ms;
-  }
-
-  .message-delay-3 {
-    animation-delay: 114ms;
-  }
-
-  .message-delay-4 {
-    animation-delay: 142ms;
-  }
-
-  .message-delay-5 {
-    animation-delay: 170ms;
+    animation: message-enter 140ms var(--motion-easing-emphasized) both;
   }
 
   .message-row[data-role="user"] {
@@ -746,7 +725,6 @@
   .assistant-bubble {
     color: var(--color-text-primary);
     background: var(--color-assistant-bubble);
-    backdrop-filter: blur(10px);
   }
 
   .user-bubble {
@@ -822,7 +800,7 @@
   }
 
   .copy-success-icon {
-    animation: copy-pop 260ms var(--motion-easing-emphasized) both;
+    animation: copy-pop 160ms var(--motion-easing-emphasized) both;
   }
 
   .retry-button {
@@ -871,19 +849,19 @@
     height: 5px;
     border-radius: 999px;
     background: var(--color-text-muted);
-    animation: typing-bounce 1.05s ease-in-out infinite;
+    animation: typing-bounce 720ms ease-in-out infinite;
   }
 
   .typing-dot-delay-0 {
     animation-delay: 0ms;
   }
 
-  .typing-dot-delay-140 {
-    animation-delay: 140ms;
+  .typing-dot-delay-90 {
+    animation-delay: 90ms;
   }
 
-  .typing-dot-delay-280 {
-    animation-delay: 280ms;
+  .typing-dot-delay-180 {
+    animation-delay: 180ms;
   }
 
   .streaming-cursor {
@@ -894,7 +872,7 @@
     border-radius: 999px;
     vertical-align: -0.13em;
     background: var(--color-accent-default);
-    animation: cursor-blink 800ms steps(1, end) infinite;
+    animation: cursor-blink 600ms steps(1, end) infinite;
   }
 
   .jump-button {
@@ -908,7 +886,7 @@
     font-weight: var(--type-weight-semibold);
     line-height: var(--type-line-height-snug);
     letter-spacing: var(--type-letter-spacing-label);
-    animation: jump-enter 220ms var(--motion-easing-emphasized) both;
+    animation: jump-enter 150ms var(--motion-easing-emphasized) both;
   }
 
   .message-markdown {
@@ -1088,7 +1066,7 @@
       border-color var(--motion-duration-fast) var(--motion-easing-standard),
       box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
       background-color var(--motion-duration-base) var(--motion-easing-standard);
-    animation: composer-enter 380ms var(--motion-easing-emphasized) 110ms both;
+    animation: composer-enter 220ms var(--motion-easing-emphasized) 50ms both;
   }
 
   .composer-controls:focus-within {
@@ -1143,7 +1121,7 @@
     line-height: var(--type-line-height-snug);
     letter-spacing: var(--type-letter-spacing-number);
     font-variant-numeric: tabular-nums;
-    animation: counter-enter 200ms var(--motion-easing-emphasized) both;
+    animation: counter-enter 140ms var(--motion-easing-emphasized) both;
   }
 
   .send-button {
@@ -1173,7 +1151,7 @@
   }
 
   .send-button.is-ready {
-    animation: send-ready 240ms var(--motion-easing-emphasized) both;
+    animation: send-ready 160ms var(--motion-easing-emphasized) both;
   }
 
   .stop-button {
@@ -1183,7 +1161,6 @@
     transition:
       filter var(--motion-duration-fast) var(--motion-easing-standard),
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
-    animation: stop-pulse 1.4s ease-in-out infinite;
   }
 
   .stop-button:hover {
@@ -1315,23 +1292,23 @@
       background-color var(--motion-duration-fast) var(--motion-easing-standard),
       box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
-    animation: skin-card-enter 300ms var(--motion-easing-emphasized) both;
+    animation: skin-card-enter 180ms var(--motion-easing-emphasized) both;
   }
 
   .skin-option-delay-0 {
-    animation-delay: 70ms;
+    animation-delay: 40ms;
   }
 
   .skin-option-delay-1 {
-    animation-delay: 115ms;
+    animation-delay: 70ms;
   }
 
   .skin-option-delay-2 {
-    animation-delay: 160ms;
+    animation-delay: 100ms;
   }
 
   .skin-option-delay-3 {
-    animation-delay: 205ms;
+    animation-delay: 130ms;
   }
 
   .skin-option:hover {
@@ -1559,7 +1536,13 @@
   }
 
   .is-spinning {
-    animation: icon-spin 850ms linear infinite;
+    animation: icon-spin 700ms linear infinite;
+  }
+
+  @media (max-width: 640px) {
+    :where(.chat-header, .date-chip, .jump-button, .composer-controls) {
+      backdrop-filter: none;
+    }
   }
 
   [data-motion-preference="reduced"] :where(
@@ -1792,16 +1775,6 @@
     }
     to {
       transform: scale(1);
-    }
-  }
-
-  @keyframes stop-pulse {
-    0%,
-    100% {
-      box-shadow: 0 8px 20px rgba(var(--shadow-color-rgb), 0.16);
-    }
-    50% {
-      box-shadow: 0 8px 24px rgba(var(--shadow-color-rgb), 0.27);
     }
   }
 

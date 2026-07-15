@@ -1,5 +1,5 @@
 import { Check, Clock3, Copy, RotateCcw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { BrandAvatar } from '@/components/common/BrandAvatar';
 import { CHATBOT_DISPLAY_NAME } from '@/constants/chat';
 import { formatMessageTime } from '@/lib/chat';
@@ -10,7 +10,6 @@ import { TypingIndicator } from './TypingIndicator';
 interface MessageBubbleProps {
   chatMessage: ChatMessage;
   canRetry: boolean;
-  entranceDelayIndex: number;
   onRetryMessage: (messageId: string) => void;
 }
 
@@ -48,10 +47,9 @@ async function copyMessageText(messageText: string): Promise<void> {
   }
 }
 
-export function MessageBubble({
+export const MessageBubble = memo(function MessageBubble({
   chatMessage,
   canRetry,
-  entranceDelayIndex,
   onRetryMessage,
 }: MessageBubbleProps) {
   const [isCopied, setIsCopied] = useState(false);
@@ -83,7 +81,7 @@ export function MessageBubble({
 
   return (
     <article
-      className={`message-row message-delay-${entranceDelayIndex} group flex w-full items-start gap-2.5 ${
+      className={`message-row group flex w-full items-start gap-2.5 ${
         isUserMessage ? 'justify-end' : 'justify-start'
       }`}
       aria-label={isUserMessage ? '내 메시지' : `${CHATBOT_DISPLAY_NAME} 메시지`}
@@ -122,13 +120,15 @@ export function MessageBubble({
               </div>
             ) : isUserMessage ? (
               <p className="message-copy whitespace-pre-wrap">{chatMessage.content}</p>
-            ) : (
+            ) : chatMessage.status === 'streaming' ? (
               <>
-                <MessageContent messageContent={chatMessage.content} />
-                {chatMessage.status === 'streaming' && (
-                  <span className="streaming-cursor" aria-hidden="true" />
-                )}
+                <p className="message-copy whitespace-pre-wrap">
+                  {chatMessage.content}
+                </p>
+                <span className="streaming-cursor" aria-hidden="true" />
               </>
+            ) : (
+              <MessageContent messageContent={chatMessage.content} />
             )}
           </div>
 
@@ -180,4 +180,4 @@ export function MessageBubble({
       </div>
     </article>
   );
-}
+});

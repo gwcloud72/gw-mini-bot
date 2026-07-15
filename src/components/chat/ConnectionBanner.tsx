@@ -1,4 +1,5 @@
 import { AlertCircle, RefreshCw, ServerOff, X } from 'lucide-react';
+import { memo } from 'react';
 import type { ChatConnectionState } from '@/types/chat';
 
 interface ConnectionBannerProps {
@@ -8,7 +9,7 @@ interface ConnectionBannerProps {
   onDismissError: () => void;
 }
 
-export function ConnectionBanner({
+export const ConnectionBanner = memo(function ConnectionBanner({
   connectionStatus,
   errorMessage,
   onRetryConnection,
@@ -66,4 +67,4 @@ export function ConnectionBanner({
       </div>
     </div>
   );
-}
+});

@@ -1,4 +1,5 @@
 import { Plus, SlidersHorizontal } from 'lucide-react';
+import { memo } from 'react';
 import { BrandAvatar } from '@/components/common/BrandAvatar';
 import { IconButton } from '@/components/common/IconButton';
 import { CHATBOT_DISPLAY_NAME, CHATBOT_ONLINE_STATUS_LABEL } from '@/constants/chat';
@@ -17,7 +18,7 @@ const CONNECTION_STATUS_LABELS: Record<ChatConnectionState, string> = {
   unconfigured: '연결 필요',
 };
 
-export function ChatHeader({
+export const ChatHeader = memo(function ChatHeader({
   connectionStatus,
   onStartNewConversation,
   onOpenSettings,
@@ -58,4 +59,4 @@ export function ChatHeader({
       </IconButton>
     </header>
   );
-}
+});

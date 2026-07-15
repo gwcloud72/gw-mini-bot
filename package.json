@@ -1,7 +1,7 @@
 {
   "name": "gw-mini-bot",
   "private": true,
-  "version": "2.6.8",
+  "version": "2.7.0",
   "type": "module",
   "engines": {
     "node": "22.16.x",

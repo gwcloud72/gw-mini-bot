@@ -14,6 +14,7 @@ import {
   getChatApiBaseUrl,
   streamChatResponse,
 } from '@/services/chatApi';
+import { createStreamingTextPresenter } from '@/lib/streamPresentation';
 import type { ChatConnectionState, ChatMessage, ChatQuotaStatus } from '@/types/chat';
 
 interface ChatSessionState {
@@ -66,6 +67,8 @@ export function useChatSession() {
     dailyQuotaResetAtEpochSeconds: null,
   }));
 
+  const chatSessionStateRef = useRef(chatSessionState);
+  chatSessionStateRef.current = chatSessionState;
   const streamAbortControllerRef = useRef<AbortController | null>(null);
   const isStreamActiveRef = useRef(false);
 
@@ -195,6 +198,13 @@ export function useChatSession() {
       isStreamActiveRef.current = true;
       let hasReceivedTextChunk = false;
       let latestQuotaStatus: ChatQuotaStatus | undefined;
+      const streamingTextPresenter = createStreamingTextPresenter((textFrame) => {
+        updateAssistantMessage(assistantMessageId, (chatMessage) => ({
+          ...chatMessage,
+          content: chatMessage.content + textFrame,
+          status: 'streaming',
+        }));
+      });
 
       setChatSessionState((currentState) => ({
         ...currentState,
@@ -208,23 +218,14 @@ export function useChatSession() {
           abortSignal: streamAbortController.signal,
           onTextChunk: (textChunk) => {
             hasReceivedTextChunk = true;
-            updateAssistantMessage(assistantMessageId, (chatMessage) => ({
-              ...chatMessage,
-              content: chatMessage.content + textChunk,
-              status: 'streaming',
-            }));
-          },
-          onComplete: () => {
-            updateAssistantMessage(assistantMessageId, (chatMessage) => ({
-              ...chatMessage,
-              status: 'complete',
-            }));
+            streamingTextPresenter.enqueueText(textChunk);
           },
           onQuotaStatus: (quotaStatus) => {
             latestQuotaStatus = quotaStatus;
           },
         });
 
+        streamingTextPresenter.flushText();
         updateAssistantMessage(assistantMessageId, (chatMessage) => ({
           ...chatMessage,
           content:
@@ -233,6 +234,8 @@ export function useChatSession() {
           status: chatMessage.content ? 'complete' : 'error',
         }));
       } catch (responseError) {
+        streamingTextPresenter.flushText();
+
         if (streamAbortController.signal.aborted) {
           updateAssistantMessage(assistantMessageId, (chatMessage) => ({
             ...chatMessage,
@@ -270,6 +273,8 @@ export function useChatSession() {
           }));
         }
       } finally {
+        streamingTextPresenter.dispose();
+
         if (latestQuotaStatus?.remainingRequests === 0) {
           revealDailyQuotaNotice(latestQuotaStatus);
         }
@@ -287,21 +292,22 @@ export function useChatSession() {
 
   const sendChatMessage = useCallback(
     (messageTextOverride?: string) => {
-      const messageText = (messageTextOverride ?? chatSessionState.draftText)
+      const currentSessionState = chatSessionStateRef.current;
+      const messageText = (messageTextOverride ?? currentSessionState.draftText)
         .trim()
         .slice(0, MAX_MESSAGE_INPUT_LENGTH);
 
       if (
         !messageText ||
         isStreamActiveRef.current ||
-        chatSessionState.dailyQuotaResetAtEpochSeconds !== null
+        currentSessionState.dailyQuotaResetAtEpochSeconds !== null
       ) {
         return;
       }
 
       const userMessage = createChatMessage('user', messageText);
       const assistantMessage = createChatMessage('assistant', '', { status: 'streaming' });
-      const contextMessages = [...chatSessionState.chatMessages, userMessage];
+      const contextMessages = [...currentSessionState.chatMessages, userMessage];
 
       setChatSessionState((currentState) => ({
         ...currentState,
@@ -312,24 +318,20 @@ export function useChatSession() {
 
       void streamAssistantResponse(contextMessages, assistantMessage.id);
     },
-    [
-      chatSessionState.chatMessages,
-      chatSessionState.dailyQuotaResetAtEpochSeconds,
-      chatSessionState.draftText,
-      streamAssistantResponse,
-    ],
+    [streamAssistantResponse],
   );
 
   const retryAssistantMessage = useCallback(
     (assistantMessageId: string) => {
+      const currentSessionState = chatSessionStateRef.current;
       if (
         isStreamActiveRef.current ||
-        chatSessionState.dailyQuotaResetAtEpochSeconds !== null
+        currentSessionState.dailyQuotaResetAtEpochSeconds !== null
       ) {
         return;
       }
 
-      const assistantMessageIndex = chatSessionState.chatMessages.findIndex(
+      const assistantMessageIndex = currentSessionState.chatMessages.findIndex(
         (chatMessage) =>
           chatMessage.id === assistantMessageId && chatMessage.role === 'assistant',
       );
@@ -338,7 +340,7 @@ export function useChatSession() {
         return;
       }
 
-      const contextMessages = chatSessionState.chatMessages.slice(0, assistantMessageIndex);
+      const contextMessages = currentSessionState.chatMessages.slice(0, assistantMessageIndex);
       const latestContextMessage = contextMessages.at(-1);
       if (latestContextMessage?.role !== 'user') {
         return;
@@ -356,11 +358,7 @@ export function useChatSession() {
 
       void streamAssistantResponse(contextMessages, replacementAssistantMessage.id);
     },
-    [
-      chatSessionState.chatMessages,
-      chatSessionState.dailyQuotaResetAtEpochSeconds,
-      streamAssistantResponse,
-    ],
+    [streamAssistantResponse],
   );
 
   const stopAssistantResponse = useCallback(() => {

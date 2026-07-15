@@ -1,4 +1,5 @@
 import { ArrowUp, Square } from 'lucide-react';
+import { memo } from 'react';
 import { MAX_MESSAGE_INPUT_LENGTH } from '@/constants/chat';
 
 interface ChatComposerProps {
@@ -10,7 +11,7 @@ interface ChatComposerProps {
   onStopGeneration: () => void;
 }
 
-export function ChatComposer({
+export const ChatComposer = memo(function ChatComposer({
   draftText,
   isStreaming,
   isDailyQuotaExhausted,
@@ -102,4 +103,4 @@ export function ChatComposer({
       </form>
     </div>
   );
-}
+});
