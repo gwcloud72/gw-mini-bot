@@ -1,7 +1,7 @@
 {
-  "name": "minichat-github-pages",
+  "name": "gw-mini-bot",
   "private": true,
-  "version": "2.7.0",
+  "version": "2.6.8",
   "type": "module",
   "engines": {
     "node": "22.16.x",
@@ -19,11 +19,10 @@
     "check:css-integrity": "node scripts/check-css-integrity.mjs",
     "check:typography": "node scripts/check-typography-policy.mjs",
     "check:public-copy": "node scripts/check-public-copy.mjs",
-    "check": "npm run check:documents && npm run check:registry && npm run check:toolchain && npm run check:vite-policy && npm run lint && npm run check:public-variables && npm run check:workflow-security && npm run check:inline-styles && npm run build && npm run check:vite && npm run check:comments && npm run check:brand && npm run check:css-integrity && npm run check:typography && npm run typecheck:tests && npm run test && npm run check:public-copy && npm run check:built-security",
+    "check": "npm run check:registry && npm run check:toolchain && npm run check:vite-policy && npm run lint && npm run check:public-variables && npm run check:workflow-security && npm run check:inline-styles && npm run build && npm run check:vite && npm run check:comments && npm run check:brand && npm run check:css-integrity && npm run check:typography && npm run typecheck:tests && npm run test && npm run check:public-copy && npm run check:built-security",
     "check:comments": "node scripts/check-comment-policy.mjs",
     "check:public-variables": "node scripts/check-public-variables.mjs",
     "check:built-security": "node scripts/check-built-security.mjs",
-    "configure:variables": "node scripts/configure-github-variables.mjs",
     "check:inline-styles": "node scripts/check-inline-style-policy.mjs",
     "check:workflow-security": "node scripts/check-workflow-security.mjs",
     "check:registry": "node scripts/check-package-registry.mjs",
@@ -31,8 +30,7 @@
     "check:vite-policy": "node scripts/check-vite-policy.mjs",
     "check:vite-output": "node scripts/check-vite-output.mjs",
     "check:vite-preview": "node scripts/check-vite-preview.mjs",
-    "check:vite": "npm run check:vite-output && npm run check:vite-preview",
-    "check:documents": "node scripts/check-document-policy.mjs"
+    "check:vite": "npm run check:vite-output && npm run check:vite-preview"
   },
   "dependencies": {
     "lucide-react": "^1.24.0",

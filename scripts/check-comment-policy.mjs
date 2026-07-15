@@ -9,12 +9,7 @@ const violations = [];
 const codeExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const sourceDirectories = ['src', 'shared', 'scripts'];
 const rootCodeFiles = ['eslint.config.js', 'vite.config.ts', 'vitest.config.ts'];
-const hashCommentFiles = [
-  '.env.example',
-  '.gitignore',
-  'github-pages.variables.example.env',
-  'cloudflare-pages.variables.example.env',
-];
+const hashCommentFiles = ['.gitignore'];
 const generatedLicensePattern = /^!\s*tailwindcss\s+v[^|]+\|\s*MIT License\s*\|\s*https:\/\/tailwindcss\.com\s*$/;
 
 async function listFilesRecursively(relativeDirectory, allowMissing = false) {

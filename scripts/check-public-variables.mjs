@@ -102,15 +102,6 @@ function readBoundedInteger(variableName, minimumValue, maximumValue) {
   return parsedValue;
 }
 
-function readDotenvVariableNames(dotenvText) {
-  return dotenvText
-    .split(/\r?\n/)
-    .map((lineText) => lineText.trim())
-    .filter(Boolean)
-    .map((lineText) => lineText.split('=', 1)[0])
-    .filter(Boolean);
-}
-
 function compareExactVariableSet(sourceLabel, discoveredNames) {
   const expectedNames = [...publicVariableNames].sort();
   const normalizedNames = [...new Set(discoveredNames)].sort();
@@ -198,15 +189,6 @@ compareExactVariableSet('GitHub Actions workflow', workflowVariableNames);
 
 if (/secrets\./.test(workflowText)) {
   validationErrors.push('프런트 배포 workflow에서 secrets 컨텍스트를 사용할 수 없습니다.');
-}
-
-for (const exampleFileName of [
-  '.env.example',
-  'github-pages.variables.example.env',
-  'cloudflare-pages.variables.example.env',
-]) {
-  const exampleText = await readFile(path.join(projectRoot, exampleFileName), 'utf8');
-  compareExactVariableSet(exampleFileName, readDotenvVariableNames(exampleText));
 }
 
 if (validationErrors.length > 0) {
