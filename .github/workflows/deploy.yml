@@ -1,0 +1,84 @@
+name: Deploy MiniChat to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_API_ORIGIN: ${{ vars.VITE_API_ORIGIN }}
+      VITE_APP_ENVIRONMENT: ${{ vars.VITE_APP_ENVIRONMENT }}
+      VITE_REQUEST_TIMEOUT_MS: ${{ vars.VITE_REQUEST_TIMEOUT_MS }}
+      VITE_HEALTH_TIMEOUT_MS: ${{ vars.VITE_HEALTH_TIMEOUT_MS }}
+      VITE_MAX_MESSAGE_LENGTH: ${{ vars.VITE_MAX_MESSAGE_LENGTH }}
+      VITE_MAX_RESPONSE_LENGTH: ${{ vars.VITE_MAX_RESPONSE_LENGTH }}
+      VITE_MAX_CONTEXT_MESSAGES: ${{ vars.VITE_MAX_CONTEXT_MESSAGES }}
+      VITE_MAX_PERSISTED_MESSAGES: ${{ vars.VITE_MAX_PERSISTED_MESSAGES }}
+      VITE_DEPLOYMENT_REPOSITORY: ${{ vars.VITE_DEPLOYMENT_REPOSITORY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22.16.0
+          cache: npm
+
+      - name: Verify public package registry
+        run: node scripts/check-package-registry.mjs
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund --progress=false
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Validate, test, and build
+        run: npm run check
+
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

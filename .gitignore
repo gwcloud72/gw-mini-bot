@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
+.github.variables.env
+github-pages.variables.env
