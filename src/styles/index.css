@@ -81,10 +81,10 @@
     --shadow-color-rgb: 41, 35, 42;
 
     --radius-shell: 2rem;
-    --motion-duration-fast: 90ms;
-    --motion-duration-base: 150ms;
-    --motion-duration-slow: 260ms;
-    --motion-easing-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --motion-duration-fast: 110ms;
+    --motion-duration-base: 170ms;
+    --motion-duration-slow: 240ms;
+    --motion-easing-standard: cubic-bezier(0.2, 0.72, 0.2, 1);
     --motion-easing-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
 
     color: var(--color-text-primary);
@@ -266,12 +266,15 @@
     width: 40rem;
     height: 40rem;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--color-accent-soft) 68%, transparent);
+    background: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--color-accent-soft) 78%, transparent) 0 42%,
+      transparent 72%
+    );
     content: "";
-    filter: blur(72px);
-    opacity: 0.62;
+    opacity: 0.58;
     pointer-events: none;
-    animation: ambient-breathe 12s ease-in-out infinite alternate;
+    animation: ambient-breathe 10s ease-in-out infinite alternate;
   }
 
   .app-backdrop[data-streaming="true"]::before {
@@ -294,7 +297,6 @@
   .chat-header {
     border-bottom: 1px solid color-mix(in srgb, var(--color-border-default) 82%, transparent);
     background: var(--color-header-background);
-    backdrop-filter: blur(24px) saturate(1.14);
     transition:
       background-color var(--motion-duration-base) var(--motion-easing-standard),
       border-color var(--motion-duration-base) var(--motion-easing-standard);
@@ -392,10 +394,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .icon-button:hover {
-    color: var(--color-text-primary);
-    background: var(--color-surface-muted);
-  }
 
   .icon-button:active {
     transform: scale(0.94);
@@ -410,10 +408,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .new-chat-button:hover {
-    color: var(--color-text-primary);
-    background: var(--color-surface-muted);
-  }
 
   .new-chat-button:active {
     transform: scale(0.96);
@@ -462,9 +456,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .banner-action:hover {
-    background: color-mix(in srgb, currentColor 8%, transparent);
-  }
 
   .banner-close {
     transition:
@@ -472,9 +463,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .banner-close:hover {
-    background: color-mix(in srgb, currentColor 8%, transparent);
-  }
 
   .chat-wallpaper {
     position: relative;
@@ -501,11 +489,12 @@
 
   .conversation-intro {
     min-height: min(650px, 100%);
-    animation: intro-enter 260ms var(--motion-easing-emphasized) 30ms both;
+    animation: intro-enter 180ms var(--motion-easing-standard) both;
   }
 
   .intro-avatar-wrap {
     filter: drop-shadow(0 16px 24px color-mix(in srgb, var(--color-accent-default) 16%, transparent));
+    animation: intro-item-enter 210ms var(--motion-easing-emphasized) 40ms both;
   }
 
   .intro-avatar {
@@ -533,6 +522,7 @@
     font-weight: var(--type-weight-semibold);
     line-height: var(--type-line-height-snug);
     letter-spacing: var(--type-letter-spacing-badge);
+    animation: intro-item-enter 210ms var(--motion-easing-emphasized) 70ms both;
   }
 
   .intro-title {
@@ -541,6 +531,7 @@
     font-weight: var(--type-weight-bold);
     line-height: var(--type-line-height-tight);
     letter-spacing: var(--type-letter-spacing-title);
+    animation: intro-item-enter 220ms var(--motion-easing-emphasized) 90ms both;
   }
 
   .intro-description {
@@ -549,6 +540,7 @@
     font-weight: var(--type-weight-regular);
     line-height: var(--type-line-height-normal);
     letter-spacing: var(--type-letter-spacing-body);
+    animation: intro-item-enter 220ms var(--motion-easing-emphasized) 110ms both;
   }
 
   .quick-prompts {
@@ -571,7 +563,6 @@
     box-shadow:
       0 8px 28px rgba(var(--shadow-color-rgb), 0.055),
       inset 0 1px 0 rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(12px);
     transition:
       border-color var(--motion-duration-fast) var(--motion-easing-standard),
       box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
@@ -609,18 +600,7 @@
     transition: transform var(--motion-duration-base) var(--motion-easing-emphasized);
   }
 
-  .quick-prompt:hover {
-    border-color: color-mix(in srgb, var(--color-accent-default) 28%, var(--color-border-default));
-    background: var(--color-surface-raised);
-    box-shadow:
-      0 14px 34px rgba(var(--shadow-color-rgb), 0.09),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    transform: translateY(-2px);
-  }
 
-  .quick-prompt:hover::after {
-    transform: scale(1.12);
-  }
 
   .quick-prompt:active {
     transform: translateY(0) scale(0.985);
@@ -669,11 +649,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .quick-prompt:hover .quick-prompt-arrow {
-    color: var(--color-accent-strong);
-    background: var(--color-accent-soft);
-    transform: translate(1px, -1px);
-  }
 
   .date-chip {
     border: 1px solid color-mix(in srgb, var(--color-border-default) 80%, white);
@@ -689,13 +664,14 @@
     animation: date-enter 160ms var(--motion-easing-emphasized) both;
   }
 
-  .message-row {
+  .message-row[data-role="assistant"] {
     transform-origin: bottom left;
-    animation: message-enter 140ms var(--motion-easing-emphasized) both;
+    animation: message-enter-assistant 170ms var(--motion-easing-emphasized) both;
   }
 
   .message-row[data-role="user"] {
     transform-origin: bottom right;
+    animation: message-enter-user 170ms var(--motion-easing-emphasized) both;
   }
 
   .message-avatar {
@@ -747,6 +723,17 @@
       0 0 0 3px color-mix(in srgb, var(--color-accent-soft) 42%, transparent);
   }
 
+  .message-bubble.is-streaming::after {
+    position: absolute;
+    inset: -1px;
+    border: 1px solid color-mix(in srgb, var(--color-accent-default) 34%, transparent);
+    border-radius: inherit;
+    content: "";
+    opacity: 0.28;
+    pointer-events: none;
+    animation: streaming-outline 1.1s ease-in-out infinite;
+  }
+
   .message-bubble.is-daily-quota {
     color: var(--color-text-primary);
     background: var(--color-warning-surface);
@@ -776,6 +763,10 @@
     letter-spacing: var(--type-letter-spacing-caption);
   }
 
+  .message-status-error {
+    color: var(--color-danger-foreground);
+  }
+
   .copy-button {
     color: var(--color-text-muted);
     background: color-mix(in srgb, var(--color-surface-raised) 90%, transparent);
@@ -786,10 +777,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .copy-button:hover {
-    color: var(--color-text-primary);
-    background: var(--color-surface-muted);
-  }
 
   .copy-button:active {
     transform: scale(0.92);
@@ -815,9 +802,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .retry-button:hover {
-    background: var(--color-danger-surface);
-  }
 
   .quota-message-icon {
     color: var(--color-warning-foreground);
@@ -842,6 +826,17 @@
 
   .typing-indicator {
     min-width: 44px;
+    animation: typing-enter 140ms var(--motion-easing-emphasized) both;
+  }
+
+  .typing-status-label {
+    color: var(--color-text-muted);
+    font-size: var(--type-size-caption);
+    font-weight: var(--type-weight-medium);
+    line-height: var(--type-line-height-snug);
+    letter-spacing: var(--type-letter-spacing-label);
+    white-space: nowrap;
+    animation: typing-label-enter 150ms var(--motion-easing-emphasized) both;
   }
 
   .typing-dot {
@@ -849,7 +844,7 @@
     height: 5px;
     border-radius: 999px;
     background: var(--color-text-muted);
-    animation: typing-bounce 720ms ease-in-out infinite;
+    animation: typing-bounce 620ms ease-in-out infinite;
   }
 
   .typing-dot-delay-0 {
@@ -872,7 +867,7 @@
     border-radius: 999px;
     vertical-align: -0.13em;
     background: var(--color-accent-default);
-    animation: cursor-blink 600ms steps(1, end) infinite;
+    animation: cursor-blink 520ms steps(1, end) infinite;
   }
 
   .jump-button {
@@ -881,12 +876,11 @@
     color: var(--color-text-secondary);
     background: color-mix(in srgb, var(--color-surface-raised) 92%, transparent);
     box-shadow: 0 10px 26px rgba(var(--shadow-color-rgb), 0.12);
-    backdrop-filter: blur(14px);
     font-size: var(--type-size-caption);
     font-weight: var(--type-weight-semibold);
     line-height: var(--type-line-height-snug);
     letter-spacing: var(--type-letter-spacing-label);
-    animation: jump-enter 150ms var(--motion-easing-emphasized) both;
+    animation: jump-enter 170ms var(--motion-easing-emphasized) both;
   }
 
   .message-markdown {
@@ -1061,12 +1055,11 @@
       0 16px 38px rgba(var(--shadow-color-rgb), 0.11),
       0 2px 6px rgba(var(--shadow-color-rgb), 0.045),
       inset 0 1px 0 rgba(255, 255, 255, 0.78);
-    backdrop-filter: blur(18px) saturate(1.08);
     transition:
       border-color var(--motion-duration-fast) var(--motion-easing-standard),
       box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
       background-color var(--motion-duration-base) var(--motion-easing-standard);
-    animation: composer-enter 220ms var(--motion-easing-emphasized) 50ms both;
+    animation: composer-enter 210ms var(--motion-easing-emphasized) 30ms both;
   }
 
   .composer-controls:focus-within {
@@ -1129,15 +1122,10 @@
     background: linear-gradient(145deg, var(--color-user-bubble-start), var(--color-user-bubble-end));
     box-shadow: 0 8px 20px color-mix(in srgb, var(--color-accent-default) 24%, transparent);
     transition:
-      filter var(--motion-duration-fast) var(--motion-easing-standard),
       transform var(--motion-duration-fast) var(--motion-easing-emphasized),
       opacity var(--motion-duration-fast) var(--motion-easing-standard);
   }
 
-  .send-button:hover:not(:disabled) {
-    filter: brightness(0.98) saturate(1.04);
-    transform: translateY(-1px);
-  }
 
   .send-button:active:not(:disabled) {
     transform: scale(0.93);
@@ -1151,21 +1139,20 @@
   }
 
   .send-button.is-ready {
-    animation: send-ready 160ms var(--motion-easing-emphasized) both;
+    animation: send-ready 170ms var(--motion-easing-emphasized) both;
+  }
+
+  .send-button.is-ready svg {
+    animation: send-icon-ready 190ms var(--motion-easing-emphasized) both;
   }
 
   .stop-button {
     color: var(--color-surface-raised);
     background: var(--color-text-primary);
     box-shadow: 0 8px 20px rgba(var(--shadow-color-rgb), 0.16);
-    transition:
-      filter var(--motion-duration-fast) var(--motion-easing-standard),
-      transform var(--motion-duration-fast) var(--motion-easing-emphasized);
+    transition: transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .stop-button:hover {
-    filter: brightness(1.08);
-  }
 
   .stop-button:active {
     transform: scale(0.93);
@@ -1186,7 +1173,6 @@
   .menu-scrim {
     background: rgba(25, 25, 29, 0.28);
     opacity: 0;
-    backdrop-filter: blur(4px);
     transition: opacity var(--motion-duration-base) var(--motion-easing-standard);
   }
 
@@ -1198,12 +1184,11 @@
       0 28px 80px rgba(var(--shadow-color-rgb), 0.24),
       0 2px 8px rgba(var(--shadow-color-rgb), 0.07);
     opacity: 0;
-    transform: translateY(18px) scale(0.985);
+    transform: translate3d(0, 24px, 0);
     transform-origin: bottom center;
-    backdrop-filter: blur(24px) saturate(1.12);
     transition:
-      opacity var(--motion-duration-base) var(--motion-easing-standard),
-      transform var(--motion-duration-base) var(--motion-easing-emphasized);
+      opacity 150ms var(--motion-easing-standard),
+      transform 180ms var(--motion-easing-emphasized);
   }
 
   .menu-layer.is-visible .menu-scrim {
@@ -1212,7 +1197,7 @@
 
   .menu-layer.is-visible .menu-panel {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
 
   .menu-layer.is-hidden .menu-panel {
@@ -1252,10 +1237,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .menu-close-button:hover {
-    color: var(--color-text-primary);
-    background: var(--color-surface-muted);
-  }
 
   .menu-section {
     padding: 0.5rem 0.15rem;
@@ -1311,11 +1292,6 @@
     animation-delay: 130ms;
   }
 
-  .skin-option:hover {
-    border-color: color-mix(in srgb, var(--color-accent-default) 28%, var(--color-border-default));
-    background: var(--color-surface-raised);
-    transform: translateY(-1px);
-  }
 
   .skin-option.is-active {
     border-color: color-mix(in srgb, var(--color-accent-default) 44%, var(--color-border-default));
@@ -1452,9 +1428,6 @@
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
   }
 
-  .menu-action:hover {
-    background: var(--color-surface-soft);
-  }
 
   .menu-action:active {
     transform: scale(0.99);
@@ -1539,8 +1512,129 @@
     animation: icon-spin 700ms linear infinite;
   }
 
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    :where(.chat-header) {
+      -webkit-backdrop-filter: blur(24px) saturate(1.14);
+      backdrop-filter: blur(24px) saturate(1.14);
+    }
+
+    :where(.quick-prompt) {
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+
+    :where(.date-chip, .jump-button) {
+      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(14px);
+    }
+
+    :where(.composer-controls) {
+      -webkit-backdrop-filter: blur(18px) saturate(1.08);
+      backdrop-filter: blur(18px) saturate(1.08);
+    }
+
+    :where(.menu-scrim) {
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+    }
+
+    :where(.menu-panel) {
+      -webkit-backdrop-filter: blur(24px) saturate(1.12);
+      backdrop-filter: blur(24px) saturate(1.12);
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .icon-button:hover {
+      color: var(--color-text-primary);
+      background: var(--color-surface-muted);
+      transform: translateY(-1px);
+    }
+
+    .new-chat-button:hover {
+      color: var(--color-text-primary);
+      background: var(--color-surface-muted);
+      transform: translateY(-1px);
+    }
+
+    .banner-action:hover,
+    .banner-close:hover {
+      background: color-mix(in srgb, currentColor 8%, transparent);
+    }
+
+    .quick-prompt:hover {
+      border-color: color-mix(in srgb, var(--color-accent-default) 28%, var(--color-border-default));
+      background: var(--color-surface-raised);
+      box-shadow:
+        0 14px 34px rgba(var(--shadow-color-rgb), 0.09),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      transform: translateY(-2px);
+    }
+
+    .quick-prompt:hover::after {
+      transform: scale(1.12);
+    }
+
+    .quick-prompt:hover .quick-prompt-arrow {
+      color: var(--color-accent-strong);
+      background: var(--color-accent-soft);
+      transform: translate(1px, -1px);
+    }
+
+    .copy-button:hover {
+      color: var(--color-text-primary);
+      background: var(--color-surface-muted);
+    }
+
+    .retry-button:hover {
+      background: var(--color-danger-surface);
+    }
+
+    .send-button:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+
+    .stop-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .menu-close-button:hover {
+      color: var(--color-text-primary);
+      background: var(--color-surface-muted);
+    }
+
+    .skin-option:hover {
+      border-color: color-mix(in srgb, var(--color-accent-default) 28%, var(--color-border-default));
+      background: var(--color-surface-raised);
+      transform: translateY(-1px);
+    }
+
+    .menu-action:hover {
+      background: var(--color-surface-soft);
+      transform: translateX(2px);
+    }
+  }
+
+  @media (min-width: 641px) {
+    .menu-layer .menu-panel {
+      transform: translate3d(10px, -8px, 0) scale(0.97);
+      transform-origin: top right;
+    }
+
+    .menu-layer.is-visible > .menu-panel {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
   @media (max-width: 640px) {
+    main.app-backdrop::before {
+      animation: none;
+      opacity: 0.48;
+      transform: translate3d(0, 0, 0);
+    }
+
     :where(.chat-header, .date-chip, .jump-button, .composer-controls) {
+      -webkit-backdrop-filter: none;
       backdrop-filter: none;
     }
   }
@@ -1549,25 +1643,98 @@
       .app-backdrop::before,
       .chat-shell,
       .chat-header,
+      .brand-avatar,
+      .icon-button,
+      .new-chat-button,
+      .banner-action,
+      .banner-close,
       .status-dot,
       .conversation-intro,
+      .intro-avatar-wrap,
+      .intro-eyebrow,
+      .intro-title,
+      .intro-description,
       .intro-sparkle,
       .quick-prompts,
       .quick-prompt,
+      .quick-prompt::after,
+      .quick-prompt-arrow,
       .date-chip,
       .message-row,
+      .message-bubble,
+      .message-bubble.is-streaming::after,
+      .copy-button,
       .copy-success-icon,
+      .retry-button,
+      .typing-indicator,
+      .typing-status-label,
       .typing-dot,
       .streaming-cursor,
       .jump-button,
       .composer-controls,
+      .menu-scrim,
+      .menu-panel,
+      .menu-close-button,
+      .menu-action,
+      .skin-check,
       .send-button,
+      .send-button svg,
       .stop-button,
       .skin-option,
       .is-spinning
     ) {
-    animation-duration: 0.01ms;
-    animation-iteration-count: 1;
+    animation: none;
+    transition-duration: 0.01ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(
+        .app-backdrop::before,
+        .chat-shell,
+        .chat-header,
+        .brand-avatar,
+        .icon-button,
+        .new-chat-button,
+        .banner-action,
+        .banner-close,
+        .status-dot,
+        .conversation-intro,
+        .intro-avatar-wrap,
+        .intro-eyebrow,
+        .intro-title,
+        .intro-description,
+        .intro-sparkle,
+        .quick-prompts,
+        .quick-prompt,
+        .quick-prompt::after,
+        .quick-prompt-arrow,
+        .date-chip,
+        .message-row,
+        .message-bubble,
+        .message-bubble.is-streaming::after,
+        .copy-button,
+        .copy-success-icon,
+        .retry-button,
+        .typing-indicator,
+        .typing-status-label,
+        .typing-dot,
+        .streaming-cursor,
+        .jump-button,
+        .composer-controls,
+        .menu-scrim,
+        .menu-panel,
+        .menu-close-button,
+        .menu-action,
+        .skin-check,
+        .send-button,
+        .send-button svg,
+        .stop-button,
+        .skin-option,
+        .is-spinning
+      ) {
+      animation: none;
+      transition-duration: 0.01ms;
+    }
   }
 
   @keyframes ambient-breathe {
@@ -1640,11 +1807,9 @@
   @keyframes intro-enter {
     from {
       opacity: 0;
-      transform: translateY(16px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
     }
   }
 
@@ -1692,14 +1857,70 @@
     }
   }
 
-  @keyframes message-enter {
+  @keyframes message-enter-assistant {
     from {
       opacity: 0;
-      transform: translateY(9px) scale(0.988);
+      transform: translate3d(-8px, 7px, 0) scale(0.988);
     }
     to {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes message-enter-user {
+    from {
+      opacity: 0;
+      transform: translate3d(8px, 7px, 0) scale(0.988);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes intro-item-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 8px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes streaming-outline {
+    0%,
+    100% {
+      opacity: 0.22;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.58;
+      transform: scale(1.008);
+    }
+  }
+
+  @keyframes typing-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 4px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes typing-label-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(4px, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
     }
   }
 
@@ -1775,6 +1996,15 @@
     }
     to {
       transform: scale(1);
+    }
+  }
+
+  @keyframes send-icon-ready {
+    from {
+      transform: translate3d(0, 3px, 0) scale(0.9);
+    }
+    to {
+      transform: translate3d(0, 0, 0) scale(1);
     }
   }
 

@@ -1,3 +1,5 @@
+import { cancelVisualFrame, requestVisualFrame } from './browserMotion';
+
 interface FrameScheduler {
   requestFrame: (frameCallback: () => void) => number;
   cancelFrame: (frameId: number) => void;
@@ -10,8 +12,8 @@ interface StreamingTextPresenter {
 }
 
 const browserFrameScheduler: FrameScheduler = {
-  requestFrame: (frameCallback) => window.requestAnimationFrame(frameCallback),
-  cancelFrame: (frameId) => window.cancelAnimationFrame(frameId),
+  requestFrame: requestVisualFrame,
+  cancelFrame: cancelVisualFrame,
 };
 
 export function createStreamingTextPresenter(

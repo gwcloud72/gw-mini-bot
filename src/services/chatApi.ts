@@ -3,6 +3,7 @@ import { SseParser, type ParsedSseEvent } from '@/lib/sse';
 import type {
   ChatQuotaStatus,
   ChatRequestMessage,
+  ChatStreamProgress,
   ChatStreamCompletionMetadata,
 } from '@/types/chat';
 
@@ -12,6 +13,7 @@ interface ChatResponseStreamOptions {
   onTextChunk: (textChunk: string) => void;
   onComplete?: (completionMetadata: ChatStreamCompletionMetadata) => void;
   onQuotaStatus?: (quotaStatus: ChatQuotaStatus) => void;
+  onProgress?: (streamProgress: ChatStreamProgress) => void;
 }
 
 interface ChatApiErrorPayload {
@@ -27,6 +29,10 @@ interface ChatStreamChunkPayload {
   text?: string;
 }
 
+interface ChatStreamStatusPayload {
+  phase?: string;
+}
+
 interface ChatApiErrorOptions {
   errorCode?: string;
   statusCode?: number;
@@ -35,9 +41,10 @@ interface ChatApiErrorOptions {
   resetAtEpochSeconds?: number;
 }
 
-interface TimedAbortController {
+interface InactivityAbortController {
   signal: AbortSignal;
   abort: () => void;
+  resetTimeout: () => void;
   cleanup: () => void;
   hasTimedOut: () => boolean;
 }
@@ -60,15 +67,31 @@ export class ChatApiError extends Error {
   }
 }
 
-function createTimedAbortController(
+function createInactivityAbortController(
   timeoutMs: number,
   externalAbortSignal?: AbortSignal,
-): TimedAbortController {
+): InactivityAbortController {
   const requestAbortController = new AbortController();
   let didRequestTimeOut = false;
+  let requestTimeoutId: ReturnType<typeof globalThis.setTimeout> | undefined;
 
   const handleExternalAbort = () => {
     requestAbortController.abort(externalAbortSignal?.reason);
+  };
+
+  const resetTimeout = () => {
+    if (requestAbortController.signal.aborted) {
+      return;
+    }
+
+    if (requestTimeoutId !== undefined) {
+      globalThis.clearTimeout(requestTimeoutId);
+    }
+
+    requestTimeoutId = globalThis.setTimeout(() => {
+      didRequestTimeOut = true;
+      requestAbortController.abort();
+    }, timeoutMs);
   };
 
   if (externalAbortSignal?.aborted) {
@@ -79,16 +102,16 @@ function createTimedAbortController(
     });
   }
 
-  const requestTimeoutId = globalThis.setTimeout(() => {
-    didRequestTimeOut = true;
-    requestAbortController.abort();
-  }, timeoutMs);
+  resetTimeout();
 
   return {
     signal: requestAbortController.signal,
     abort: () => requestAbortController.abort(),
+    resetTimeout,
     cleanup: () => {
-      globalThis.clearTimeout(requestTimeoutId);
+      if (requestTimeoutId !== undefined) {
+        globalThis.clearTimeout(requestTimeoutId);
+      }
       externalAbortSignal?.removeEventListener('abort', handleExternalAbort);
     },
     hasTimedOut: () => didRequestTimeOut,
@@ -187,7 +210,10 @@ export function readChatQuotaStatus(
 
 function handleChatStreamEvent(
   parsedSseEvent: ParsedSseEvent,
-  streamCallbacks: Pick<ChatResponseStreamOptions, 'onTextChunk' | 'onComplete'>,
+  streamCallbacks: Pick<
+    ChatResponseStreamOptions,
+    'onTextChunk' | 'onComplete' | 'onProgress'
+  >,
 ): void {
   if (!parsedSseEvent.data) {
     return;
@@ -205,6 +231,16 @@ function handleChatStreamEvent(
   }
 
   switch (parsedSseEvent.event) {
+    case 'ready':
+      streamCallbacks.onProgress?.('ready');
+      break;
+    case 'status': {
+      const streamStatus = parsedEventPayload as ChatStreamStatusPayload;
+      if (streamStatus.phase === 'generating') {
+        streamCallbacks.onProgress?.('generating');
+      }
+      break;
+    }
     case 'chunk': {
       const textChunk = (parsedEventPayload as ChatStreamChunkPayload).text;
       if (typeof textChunk === 'string' && textChunk.length > 0) {
@@ -254,7 +290,7 @@ export async function streamChatResponse(
     });
   }
 
-  const timedAbortController = createTimedAbortController(
+  const inactivityAbortController = createInactivityAbortController(
     publicAppConfig.requestTimeoutMs,
     streamOptions.abortSignal,
   );
@@ -267,7 +303,7 @@ export async function streamChatResponse(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ messages: streamOptions.requestMessages }),
-      signal: timedAbortController.signal,
+      signal: inactivityAbortController.signal,
       cache: 'no-store',
       credentials: 'omit',
       redirect: 'error',
@@ -284,6 +320,8 @@ export async function streamChatResponse(
         isRetryable: true,
       });
     }
+
+    inactivityAbortController.resetTimeout();
 
     const quotaStatus = readChatQuotaStatus(chatResponse.headers);
     if (quotaStatus) {
@@ -304,14 +342,14 @@ export async function streamChatResponse(
 
     const streamCallbacks: Pick<
       ChatResponseStreamOptions,
-      'onTextChunk' | 'onComplete'
+      'onTextChunk' | 'onComplete' | 'onProgress'
     > = {
       onTextChunk: (textChunk) => {
         receivedResponseCharacterCount += textChunk.length;
         if (
           receivedResponseCharacterCount > publicAppConfig.maxResponseLength
         ) {
-          timedAbortController.abort();
+          inactivityAbortController.abort();
           throw new ChatApiError('답변이 허용된 길이를 초과했습니다.', {
             errorCode: 'RESPONSE_TOO_LARGE',
             isRetryable: true,
@@ -320,6 +358,7 @@ export async function streamChatResponse(
 
         streamOptions.onTextChunk(textChunk);
       },
+      onProgress: streamOptions.onProgress,
       onComplete: (completionMetadata) => {
         hasReceivedCompletionEvent = true;
         streamOptions.onComplete?.(completionMetadata);
@@ -336,6 +375,8 @@ export async function streamChatResponse(
         if (isResponseStreamComplete) {
           break;
         }
+
+        inactivityAbortController.resetTimeout();
 
         const decodedResponseChunk = responseTextDecoder.decode(responseChunk, {
           stream: true,
@@ -372,16 +413,16 @@ export async function streamChatResponse(
       responseStreamReader.releaseLock();
     }
   } catch (requestError) {
-    if (timedAbortController.hasTimedOut()) {
-      throw new ChatApiError('답변 시간이 초과됐습니다. 다시 시도해주세요.', {
-        errorCode: 'REQUEST_TIMEOUT',
+    if (inactivityAbortController.hasTimedOut()) {
+      throw new ChatApiError('답변 연결이 오래 멈춰 중단했어요. 다시 시도해주세요.', {
+        errorCode: 'STREAM_TIMEOUT',
         isRetryable: true,
       });
     }
 
     throw requestError;
   } finally {
-    timedAbortController.cleanup();
+    inactivityAbortController.cleanup();
   }
 }
 
@@ -395,7 +436,7 @@ export async function checkChatApiHealth(
     return false;
   }
 
-  const timedAbortController = createTimedAbortController(
+  const inactivityAbortController = createInactivityAbortController(
     publicAppConfig.healthTimeoutMs,
     externalAbortSignal,
   );
@@ -404,7 +445,7 @@ export async function checkChatApiHealth(
     const healthResponse = await fetch(`${chatApiBaseUrl}/api/health`, {
       method: 'GET',
       headers: { Accept: 'application/json' },
-      signal: timedAbortController.signal,
+      signal: inactivityAbortController.signal,
       cache: 'no-store',
       credentials: 'omit',
       redirect: 'error',
@@ -415,6 +456,6 @@ export async function checkChatApiHealth(
   } catch {
     return false;
   } finally {
-    timedAbortController.cleanup();
+    inactivityAbortController.cleanup();
   }
 }

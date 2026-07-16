@@ -2,20 +2,21 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from '@/app/App';
 import { loadInitialChatSkinId } from '@/hooks/useChatSkin';
+import {
+  isReducedMotionPreferred,
+  subscribeToMotionPreference,
+} from '@/lib/browserMotion';
 import '@/styles/index.css';
 
-const motionPreferenceQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-document.documentElement.dataset.skin = loadInitialChatSkinId();
-document.documentElement.dataset.motionPreference = motionPreferenceQuery.matches
-  ? 'reduced'
-  : 'full';
-
-motionPreferenceQuery.addEventListener('change', (motionPreferenceEvent) => {
-  document.documentElement.dataset.motionPreference = motionPreferenceEvent.matches
+function applyMotionPreference(isReducedMotion: boolean): void {
+  document.documentElement.dataset.motionPreference = isReducedMotion
     ? 'reduced'
     : 'full';
-});
+}
+
+document.documentElement.dataset.skin = loadInitialChatSkinId();
+applyMotionPreference(isReducedMotionPreferred());
+subscribeToMotionPreference(applyMotionPreference);
 
 const rootElement = document.getElementById('root');
 

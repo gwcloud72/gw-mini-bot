@@ -15,7 +15,20 @@ import {
   streamChatResponse,
 } from '@/services/chatApi';
 import { createStreamingTextPresenter } from '@/lib/streamPresentation';
-import type { ChatConnectionState, ChatMessage, ChatQuotaStatus } from '@/types/chat';
+import type {
+  ChatConnectionState,
+  ChatMessage,
+  ChatQuotaStatus,
+  ChatStreamProgress,
+} from '@/types/chat';
+
+
+const STREAM_DELAY_NOTICE_MS = 8_000;
+
+const STREAM_PROGRESS_MESSAGES: Record<ChatStreamProgress, string> = {
+  ready: '답변 준비 중…',
+  generating: '답변 작성 중…',
+};
 
 interface ChatSessionState {
   chatMessages: ChatMessage[];
@@ -203,8 +216,20 @@ export function useChatSession() {
           ...chatMessage,
           content: chatMessage.content + textFrame,
           status: 'streaming',
+          statusMessage: undefined,
+          progressMessage: undefined,
         }));
       });
+      const delayedProgressTimeoutId = window.setTimeout(() => {
+        if (hasReceivedTextChunk || !isStreamActiveRef.current) {
+          return;
+        }
+
+        updateAssistantMessage(assistantMessageId, (chatMessage) => ({
+          ...chatMessage,
+          progressMessage: '응답이 조금 늦어지고 있어요…',
+        }));
+      }, STREAM_DELAY_NOTICE_MS);
 
       setChatSessionState((currentState) => ({
         ...currentState,
@@ -218,7 +243,18 @@ export function useChatSession() {
           abortSignal: streamAbortController.signal,
           onTextChunk: (textChunk) => {
             hasReceivedTextChunk = true;
+            window.clearTimeout(delayedProgressTimeoutId);
             streamingTextPresenter.enqueueText(textChunk);
+          },
+          onProgress: (streamProgress) => {
+            if (hasReceivedTextChunk) {
+              return;
+            }
+
+            updateAssistantMessage(assistantMessageId, (chatMessage) => ({
+              ...chatMessage,
+              progressMessage: STREAM_PROGRESS_MESSAGES[streamProgress],
+            }));
           },
           onQuotaStatus: (quotaStatus) => {
             latestQuotaStatus = quotaStatus;
@@ -232,6 +268,8 @@ export function useChatSession() {
             chatMessage.content ||
             '답변 내용이 비어 있습니다. 질문을 조금 바꿔 다시 보내주세요.',
           status: chatMessage.content ? 'complete' : 'error',
+          statusMessage: undefined,
+          progressMessage: undefined,
         }));
       } catch (responseError) {
         streamingTextPresenter.flushText();
@@ -241,6 +279,8 @@ export function useChatSession() {
             ...chatMessage,
             content: chatMessage.content || '답변 생성을 중단했어요.',
             status: 'cancelled',
+            statusMessage: undefined,
+            progressMessage: undefined,
           }));
           return;
         }
@@ -255,6 +295,8 @@ export function useChatSession() {
           content: hasReceivedTextChunk ? chatMessage.content : userFacingErrorMessage,
           status: 'error',
           errorCode: responseErrorCode,
+          statusMessage: hasReceivedTextChunk ? userFacingErrorMessage : undefined,
+          progressMessage: undefined,
           messageKind: isDailyQuotaExceeded
             ? 'daily-quota-notice'
             : 'standard',
@@ -273,6 +315,7 @@ export function useChatSession() {
           }));
         }
       } finally {
+        window.clearTimeout(delayedProgressTimeoutId);
         streamingTextPresenter.dispose();
 
         if (latestQuotaStatus?.remainingRequests === 0) {
@@ -306,7 +349,10 @@ export function useChatSession() {
       }
 
       const userMessage = createChatMessage('user', messageText);
-      const assistantMessage = createChatMessage('assistant', '', { status: 'streaming' });
+      const assistantMessage = createChatMessage('assistant', '', {
+        status: 'streaming',
+        progressMessage: '서버에 연결 중…',
+      });
       const contextMessages = [...currentSessionState.chatMessages, userMessage];
 
       setChatSessionState((currentState) => ({
@@ -348,6 +394,7 @@ export function useChatSession() {
 
       const replacementAssistantMessage = createChatMessage('assistant', '', {
         status: 'streaming',
+        progressMessage: '서버에 연결 중…',
       });
 
       setChatSessionState((currentState) => ({

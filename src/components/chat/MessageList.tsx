@@ -1,6 +1,11 @@
 import { ArrowDown } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatConversationDate } from '@/lib/chat';
+import {
+  cancelVisualFrame,
+  getMotionAwareScrollBehavior,
+  requestVisualFrame,
+} from '@/lib/browserMotion';
 import type { ChatMessage } from '@/types/chat';
 import { ConversationIntro } from './ConversationIntro';
 import { MessageBubble } from './MessageBubble';
@@ -12,9 +17,19 @@ interface MessageListProps {
   onRetryMessage: (messageId: string) => void;
 }
 
-function getAccessibleScrollBehavior(preferredBehavior: ScrollBehavior): ScrollBehavior {
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  return prefersReducedMotion ? 'auto' : preferredBehavior;
+function scrollViewportTo(
+  messageViewport: HTMLDivElement,
+  topPosition: number,
+  scrollBehavior: ScrollBehavior,
+): void {
+  try {
+    messageViewport.scrollTo({
+      top: topPosition,
+      behavior: scrollBehavior,
+    });
+  } catch {
+    messageViewport.scrollTop = topPosition;
+  }
 }
 
 export function MessageList({
@@ -33,6 +48,7 @@ export function MessageList({
     (chatMessage) => !chatMessage.isWelcome,
   );
   const hasConversationMessages = visibleMessages.length > 0;
+  const latestMessageContentLength = chatMessages.at(-1)?.content.length ?? 0;
 
   const hideJumpButton = useCallback(() => {
     setIsJumpButtonVisible((isVisible) => (isVisible ? false : isVisible));
@@ -56,7 +72,7 @@ export function MessageList({
       return;
     }
 
-    scheduledScrollFrameRef.current = window.requestAnimationFrame(() => {
+    scheduledScrollFrameRef.current = requestVisualFrame(() => {
       scheduledScrollFrameRef.current = null;
       scrollToLatestImmediately();
     });
@@ -69,10 +85,11 @@ export function MessageList({
     }
 
     isViewportPinnedRef.current = true;
-    messageViewport.scrollTo({
-      top: messageViewport.scrollHeight,
-      behavior: getAccessibleScrollBehavior('smooth'),
-    });
+    scrollViewportTo(
+      messageViewport,
+      messageViewport.scrollHeight,
+      getMotionAwareScrollBehavior('smooth'),
+    );
     hideJumpButton();
   }, [hideJumpButton]);
 
@@ -84,6 +101,12 @@ export function MessageList({
       schedulePinnedScroll();
     }
   }, [chatMessages.length, schedulePinnedScroll]);
+
+  useEffect(() => {
+    if (isStreaming || latestMessageContentLength > 0) {
+      schedulePinnedScroll();
+    }
+  }, [isStreaming, latestMessageContentLength, schedulePinnedScroll]);
 
   useEffect(() => {
     const messageStage = messageStageRef.current;
@@ -102,7 +125,7 @@ export function MessageList({
   useEffect(
     () => () => {
       if (scheduledScrollFrameRef.current !== null) {
-        window.cancelAnimationFrame(scheduledScrollFrameRef.current);
+        cancelVisualFrame(scheduledScrollFrameRef.current);
       }
     },
     [],

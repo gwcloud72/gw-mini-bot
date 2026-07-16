@@ -4,6 +4,8 @@ export type ChatMessageStatus = 'complete' | 'streaming' | 'error' | 'cancelled'
 
 export type ChatMessageKind = 'standard' | 'daily-quota-notice';
 
+export type ChatStreamProgress = 'ready' | 'generating';
+
 export interface ChatMessage {
   id: string;
   role: ChatRole;
@@ -12,6 +14,8 @@ export interface ChatMessage {
   status: ChatMessageStatus;
   isWelcome?: boolean;
   errorCode?: string;
+  statusMessage?: string;
+  progressMessage?: string;
   messageKind?: ChatMessageKind;
 }
 

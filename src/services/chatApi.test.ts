@@ -33,6 +33,9 @@ describe('streamChatResponse', () => {
             'event: ready',
             'data: {"requestId":"req-1"}',
             '',
+            'event: status',
+            'data: {"phase":"generating"}',
+            '',
             'event: chunk',
             'data: {"text":"안녕"}',
             '',
@@ -58,6 +61,7 @@ describe('streamChatResponse', () => {
     const receivedTextChunks: string[] = [];
     let receivedFinishReason: string | undefined;
     let receivedRemainingRequests: number | undefined;
+    const receivedProgressStates: string[] = [];
 
     await streamChatResponse({
       requestMessages,
@@ -69,11 +73,15 @@ describe('streamChatResponse', () => {
       onQuotaStatus: (quotaStatus) => {
         receivedRemainingRequests = quotaStatus.remainingRequests;
       },
+      onProgress: (streamProgress) => {
+        receivedProgressStates.push(streamProgress);
+      },
     });
 
     expect(receivedTextChunks.join('')).toBe('안녕하세요');
     expect(receivedFinishReason).toBe('STOP');
     expect(receivedRemainingRequests).toBe(0);
+    expect(receivedProgressStates).toEqual(['ready', 'generating']);
     expect(fetch).toHaveBeenCalledWith(
       'https://worker.example/api/chat',
       expect.objectContaining({

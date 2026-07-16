@@ -2,10 +2,13 @@ import {
   CHAT_HISTORY_STORAGE_KEY,
   LEGACY_CHAT_HISTORY_STORAGE_KEYS,
   MAX_CONTEXT_MESSAGE_COUNT,
+  MAX_MESSAGE_INPUT_LENGTH,
   MAX_PERSISTED_MESSAGE_COUNT,
   WELCOME_MESSAGE_TEXT,
 } from '@/constants/chat';
 import type { ChatMessage, ChatRequestMessage, ChatRole } from '@/types/chat';
+
+const MAX_CONTEXT_CHARACTER_COUNT = 10_000;
 
 interface PersistedConversationRecord {
   serializedMessages: string;
@@ -23,7 +26,12 @@ function createChatMessageId(): string {
 export function createChatMessage(
   role: ChatRole,
   content: string,
-  messageOptions: Partial<Pick<ChatMessage, 'status' | 'isWelcome' | 'errorCode' | 'messageKind'>> = {},
+  messageOptions: Partial<
+    Pick<
+      ChatMessage,
+      'status' | 'isWelcome' | 'errorCode' | 'statusMessage' | 'progressMessage' | 'messageKind'
+    >
+  > = {},
 ): ChatMessage {
   return {
     id: createChatMessageId(),
@@ -33,6 +41,8 @@ export function createChatMessage(
     status: messageOptions.status ?? 'complete',
     isWelcome: messageOptions.isWelcome,
     errorCode: messageOptions.errorCode,
+    statusMessage: messageOptions.statusMessage,
+    progressMessage: messageOptions.progressMessage,
     messageKind: messageOptions.messageKind ?? 'standard',
   };
 }
@@ -42,7 +52,7 @@ export function createWelcomeChatMessage(): ChatMessage {
 }
 
 export function toChatRequestMessages(chatMessages: ChatMessage[]): ChatRequestMessage[] {
-  return chatMessages
+  const eligibleMessages = chatMessages
     .filter(
       (chatMessage) =>
         !chatMessage.isWelcome &&
@@ -51,8 +61,33 @@ export function toChatRequestMessages(chatMessages: ChatMessage[]): ChatRequestM
         chatMessage.status !== 'cancelled' &&
         chatMessage.messageKind !== 'daily-quota-notice',
     )
-    .slice(-MAX_CONTEXT_MESSAGE_COUNT)
-    .map(({ role, content }) => ({ role, content }));
+    .slice(-MAX_CONTEXT_MESSAGE_COUNT);
+  const selectedMessages: ChatRequestMessage[] = [];
+  let selectedCharacterCount = 0;
+
+  for (let messageIndex = eligibleMessages.length - 1; messageIndex >= 0; messageIndex -= 1) {
+    const chatMessage = eligibleMessages[messageIndex];
+    if (!chatMessage) {
+      continue;
+    }
+
+    const normalizedContent = chatMessage.content
+      .trim()
+      .slice(0, MAX_MESSAGE_INPUT_LENGTH);
+    const nextCharacterCount = selectedCharacterCount + normalizedContent.length;
+
+    if (
+      selectedMessages.length > 0 &&
+      nextCharacterCount > MAX_CONTEXT_CHARACTER_COUNT
+    ) {
+      break;
+    }
+
+    selectedMessages.push({ role: chatMessage.role, content: normalizedContent });
+    selectedCharacterCount = nextCharacterCount;
+  }
+
+  return selectedMessages.reverse();
 }
 
 function isPersistedChatMessage(candidateValue: unknown): candidateValue is ChatMessage {

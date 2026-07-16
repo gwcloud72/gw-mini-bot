@@ -1,6 +1,11 @@
 import { RefreshCw, RotateCcw, ShieldCheck, Wifi, X } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { CHATBOT_DISPLAY_NAME } from '@/constants/chat';
+import {
+  cancelVisualFrame,
+  isReducedMotionPreferred,
+  requestVisualFrame,
+} from '@/lib/browserMotion';
 import type { ChatConnectionState } from '@/types/chat';
 import type { ChatSkinId } from '@/types/skin';
 import { SkinPicker } from './SkinPicker';
@@ -15,7 +20,7 @@ interface ChatMenuProps {
   onRefreshConnection: () => void;
 }
 
-const MENU_EXIT_DURATION_MS = 220;
+const MENU_EXIT_DURATION_MS = 180;
 
 const CONNECTION_STATUS_LABELS: Record<ChatConnectionState, string> = {
   checking: '확인 중',
@@ -42,25 +47,26 @@ export const ChatMenu = memo(function ChatMenu({
     let visibilityFrameId: number | undefined;
     let unmountTimeoutId: number | undefined;
 
-    const mountFrameId = window.requestAnimationFrame(() => {
+    const mountFrameId = requestVisualFrame(() => {
       if (isOpen) {
         setIsMenuMounted(true);
-        visibilityFrameId = window.requestAnimationFrame(() => {
+        visibilityFrameId = requestVisualFrame(() => {
           setIsMenuVisible(true);
         });
         return;
       }
 
       setIsMenuVisible(false);
+      const exitDurationMs = isReducedMotionPreferred() ? 0 : MENU_EXIT_DURATION_MS;
       unmountTimeoutId = window.setTimeout(() => {
         setIsMenuMounted(false);
-      }, MENU_EXIT_DURATION_MS);
+      }, exitDurationMs);
     });
 
     return () => {
-      window.cancelAnimationFrame(mountFrameId);
+      cancelVisualFrame(mountFrameId);
       if (visibilityFrameId !== undefined) {
-        window.cancelAnimationFrame(visibilityFrameId);
+        cancelVisualFrame(visibilityFrameId);
       }
       if (unmountTimeoutId !== undefined) {
         window.clearTimeout(unmountTimeoutId);
@@ -73,7 +79,7 @@ export const ChatMenu = memo(function ChatMenu({
       return undefined;
     }
 
-    const focusFrameId = window.requestAnimationFrame(() => {
+    const focusFrameId = requestVisualFrame(() => {
       firstMenuActionRef.current?.focus();
     });
 
@@ -85,7 +91,7 @@ export const ChatMenu = memo(function ChatMenu({
 
     window.addEventListener('keydown', handleMenuKeyDown);
     return () => {
-      window.cancelAnimationFrame(focusFrameId);
+      cancelVisualFrame(focusFrameId);
       window.removeEventListener('keydown', handleMenuKeyDown);
     };
   }, [isMenuMounted, isOpen, onCloseMenu]);

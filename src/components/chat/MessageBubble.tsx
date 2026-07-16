@@ -107,7 +107,7 @@ export const MessageBubble = memo(function MessageBubble({
             } ${isDailyQuotaMessage ? 'is-daily-quota' : ''}`}
           >
             {isWaitingForFirstChunk ? (
-              <TypingIndicator />
+              <TypingIndicator statusLabel={chatMessage.progressMessage} />
             ) : isDailyQuotaMessage ? (
               <div className="quota-message flex items-start gap-3">
                 <span className="quota-message-icon mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full">
@@ -141,6 +141,12 @@ export const MessageBubble = memo(function MessageBubble({
               <RotateCcw className="size-3" aria-hidden="true" />
               다시 답변받기
             </button>
+          )}
+
+          {!isUserMessage && chatMessage.status === 'error' && chatMessage.statusMessage && (
+            <p className="message-status message-status-error mt-1.5 px-1">
+              {chatMessage.statusMessage}
+            </p>
           )}
 
           {!isUserMessage && chatMessage.status === 'cancelled' && (
