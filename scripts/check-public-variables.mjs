@@ -4,18 +4,32 @@ import { fileURLToPath } from 'node:url';
 import { loadEnv } from 'vite';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const environmentContractText = await readFile(
+  path.join(projectRoot, 'shared/publicEnvironmentContract.ts'),
+  'utf8',
+);
+const environmentContractBlock = environmentContractText.match(
+  /PUBLIC_ENVIRONMENT_VARIABLE_NAMES\s*=\s*\[([\s\S]*?)\]\s*as const/,
+)?.[1];
+
+if (!environmentContractBlock) {
+  throw new Error('공개 환경변수 계약 목록을 읽지 못했습니다.');
+}
+
 const publicVariableNames = [
-  'VITE_API_BASE_URL',
-  'VITE_API_ORIGIN',
-  'VITE_APP_ENVIRONMENT',
-  'VITE_REQUEST_TIMEOUT_MS',
-  'VITE_HEALTH_TIMEOUT_MS',
-  'VITE_MAX_MESSAGE_LENGTH',
-  'VITE_MAX_RESPONSE_LENGTH',
-  'VITE_MAX_CONTEXT_MESSAGES',
-  'VITE_MAX_PERSISTED_MESSAGES',
-  'VITE_DEPLOYMENT_REPOSITORY',
-];
+  ...environmentContractBlock.matchAll(/['"](VITE_[A-Z0-9_]+)['"]/g),
+].map((matchResult) => matchResult[1]);
+
+if (
+  publicVariableNames.length !== 10 ||
+  new Set(publicVariableNames).size !== publicVariableNames.length
+) {
+  throw new Error('공개 환경변수 계약은 중복 없는 정확히 10개여야 합니다.');
+}
+
+const runtimePublicVariableNames = publicVariableNames.filter(
+  (variableName) => variableName !== 'VITE_DEPLOYMENT_REPOSITORY',
+);
 const validationErrors = [];
 const mode =
   process.env.GITHUB_ACTIONS === 'true' ||
@@ -102,15 +116,32 @@ function readBoundedInteger(variableName, minimumValue, maximumValue) {
   return parsedValue;
 }
 
-function compareExactVariableSet(sourceLabel, discoveredNames) {
-  const expectedNames = [...publicVariableNames].sort();
+function compareExactVariableSet(
+  sourceLabel,
+  discoveredNames,
+  expectedVariableNames = publicVariableNames,
+) {
+  const expectedNames = [...expectedVariableNames].sort();
   const normalizedNames = [...new Set(discoveredNames)].sort();
 
   if (JSON.stringify(expectedNames) !== JSON.stringify(normalizedNames)) {
     validationErrors.push(
-      `${sourceLabel} 변수 목록이 정확한 10개 목록과 일치하지 않습니다.`,
+      `${sourceLabel} 변수 목록이 계약과 일치하지 않습니다. ` +
+        `예상: ${expectedNames.join(', ')} / 현재: ${normalizedNames.join(', ')}`,
     );
   }
+}
+
+function findPublicVariableNames(sourceText) {
+  return [...sourceText.matchAll(/\bVITE_[A-Z0-9_]+\b/g)].map(
+    (matchResult) => matchResult[0],
+  );
+}
+
+function findRuntimeEnvironmentPropertyNames(sourceText) {
+  return [
+    ...sourceText.matchAll(/environmentValues\.(VITE_[A-Z0-9_]+)/g),
+  ].map((matchResult) => matchResult[1]);
 }
 
 const appEnvironment = readRequiredValue('VITE_APP_ENVIRONMENT');
@@ -178,14 +209,30 @@ if (process.env.GITHUB_ACTIONS === 'true') {
   }
 }
 
-const workflowText = await readFile(
-  path.join(projectRoot, '.github/workflows/deploy.yml'),
-  'utf8',
-);
+const [workflowText, environmentTypeText, viteConfigurationText, runtimeConfigurationText] =
+  await Promise.all([
+    readFile(path.join(projectRoot, '.github/workflows/deploy.yml'), 'utf8'),
+    readFile(path.join(projectRoot, 'src/env.d.ts'), 'utf8'),
+    readFile(path.join(projectRoot, 'vite.config.ts'), 'utf8'),
+    readFile(path.join(projectRoot, 'src/config/publicAppConfig.ts'), 'utf8'),
+  ]);
 const workflowVariableNames = [...workflowText.matchAll(/vars\.([A-Z0-9_]+)/g)].map(
   (matchResult) => matchResult[1],
 );
 compareExactVariableSet('GitHub Actions workflow', workflowVariableNames);
+compareExactVariableSet(
+  'src/env.d.ts',
+  findPublicVariableNames(environmentTypeText),
+);
+compareExactVariableSet(
+  'vite.config.ts',
+  findPublicVariableNames(viteConfigurationText),
+);
+compareExactVariableSet(
+  'src/config/publicAppConfig.ts',
+  findRuntimeEnvironmentPropertyNames(runtimeConfigurationText),
+  runtimePublicVariableNames,
+);
 
 if (/secrets\./.test(workflowText)) {
   validationErrors.push('프런트 배포 workflow에서 secrets 컨텍스트를 사용할 수 없습니다.');

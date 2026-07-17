@@ -84,6 +84,7 @@ export function useChatSession() {
   chatSessionStateRef.current = chatSessionState;
   const streamAbortControllerRef = useRef<AbortController | null>(null);
   const isStreamActiveRef = useRef(false);
+  const activeStreamSequenceRef = useRef(0);
 
   useEffect(() => {
     if (chatSessionState.isStreaming) {
@@ -167,7 +168,10 @@ export function useChatSession() {
 
   useEffect(
     () => () => {
+      activeStreamSequenceRef.current += 1;
       streamAbortControllerRef.current?.abort();
+      streamAbortControllerRef.current = null;
+      isStreamActiveRef.current = false;
     },
     [],
   );
@@ -207,11 +211,22 @@ export function useChatSession() {
       }
 
       const streamAbortController = new AbortController();
+      const streamSequence = activeStreamSequenceRef.current + 1;
+      activeStreamSequenceRef.current = streamSequence;
       streamAbortControllerRef.current = streamAbortController;
       isStreamActiveRef.current = true;
+
+      const isCurrentStream = () =>
+        activeStreamSequenceRef.current === streamSequence &&
+        streamAbortControllerRef.current === streamAbortController;
+
       let hasReceivedTextChunk = false;
       let latestQuotaStatus: ChatQuotaStatus | undefined;
       const streamingTextPresenter = createStreamingTextPresenter((textFrame) => {
+        if (!isCurrentStream()) {
+          return;
+        }
+
         updateAssistantMessage(assistantMessageId, (chatMessage) => ({
           ...chatMessage,
           content: chatMessage.content + textFrame,
@@ -221,7 +236,11 @@ export function useChatSession() {
         }));
       });
       const delayedProgressTimeoutId = window.setTimeout(() => {
-        if (hasReceivedTextChunk || !isStreamActiveRef.current) {
+        if (
+          hasReceivedTextChunk ||
+          !isStreamActiveRef.current ||
+          !isCurrentStream()
+        ) {
           return;
         }
 
@@ -242,12 +261,16 @@ export function useChatSession() {
           requestMessages: toChatRequestMessages(contextMessages),
           abortSignal: streamAbortController.signal,
           onTextChunk: (textChunk) => {
+            if (!isCurrentStream()) {
+              return;
+            }
+
             hasReceivedTextChunk = true;
             window.clearTimeout(delayedProgressTimeoutId);
             streamingTextPresenter.enqueueText(textChunk);
           },
           onProgress: (streamProgress) => {
-            if (hasReceivedTextChunk) {
+            if (hasReceivedTextChunk || !isCurrentStream()) {
               return;
             }
 
@@ -257,9 +280,15 @@ export function useChatSession() {
             }));
           },
           onQuotaStatus: (quotaStatus) => {
-            latestQuotaStatus = quotaStatus;
+            if (isCurrentStream()) {
+              latestQuotaStatus = quotaStatus;
+            }
           },
         });
+
+        if (!isCurrentStream()) {
+          return;
+        }
 
         streamingTextPresenter.flushText();
         updateAssistantMessage(assistantMessageId, (chatMessage) => ({
@@ -273,6 +302,10 @@ export function useChatSession() {
         }));
       } catch (responseError) {
         streamingTextPresenter.flushText();
+
+        if (!isCurrentStream()) {
+          return;
+        }
 
         if (streamAbortController.signal.aborted) {
           updateAssistantMessage(assistantMessageId, (chatMessage) => ({
@@ -317,6 +350,10 @@ export function useChatSession() {
       } finally {
         window.clearTimeout(delayedProgressTimeoutId);
         streamingTextPresenter.dispose();
+
+        if (!isCurrentStream()) {
+          return;
+        }
 
         if (latestQuotaStatus?.remainingRequests === 0) {
           revealDailyQuotaNotice(latestQuotaStatus);
@@ -413,7 +450,9 @@ export function useChatSession() {
   }, []);
 
   const resetConversation = useCallback(() => {
+    activeStreamSequenceRef.current += 1;
     streamAbortControllerRef.current?.abort();
+    streamAbortControllerRef.current = null;
     isStreamActiveRef.current = false;
     setChatSessionState((currentState) => {
       const quotaNoticeMessage = currentState.chatMessages.find(

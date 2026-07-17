@@ -3,19 +3,10 @@ import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
-
-const PUBLIC_VARIABLE_NAMES = [
-  'VITE_API_BASE_URL',
-  'VITE_API_ORIGIN',
-  'VITE_APP_ENVIRONMENT',
-  'VITE_REQUEST_TIMEOUT_MS',
-  'VITE_HEALTH_TIMEOUT_MS',
-  'VITE_MAX_MESSAGE_LENGTH',
-  'VITE_MAX_RESPONSE_LENGTH',
-  'VITE_MAX_CONTEXT_MESSAGES',
-  'VITE_MAX_PERSISTED_MESSAGES',
-  'VITE_DEPLOYMENT_REPOSITORY',
-] as const;
+import {
+  PUBLIC_ENVIRONMENT_VARIABLE_NAMES,
+  type PublicEnvironmentVariableName,
+} from './shared/publicEnvironmentContract';
 
 interface ValidatedBuildEnvironment {
   apiOrigin: string;
@@ -25,7 +16,7 @@ interface ValidatedBuildEnvironment {
 
 function readRequiredValue(
   environmentValues: Record<string, string | undefined>,
-  variableName: (typeof PUBLIC_VARIABLE_NAMES)[number],
+  variableName: PublicEnvironmentVariableName,
 ): string {
   const variableValue = environmentValues[variableName]?.trim();
   if (!variableValue) {
@@ -39,7 +30,7 @@ function readRequiredValue(
 
 function readBoundedInteger(
   environmentValues: Record<string, string | undefined>,
-  variableName: (typeof PUBLIC_VARIABLE_NAMES)[number],
+  variableName: PublicEnvironmentVariableName,
   minimumValue: number,
   maximumValue: number,
 ): number {
@@ -92,7 +83,7 @@ function readRootUrl(
 function validateBuildEnvironment(
   environmentValues: Record<string, string | undefined>,
 ): ValidatedBuildEnvironment {
-  for (const variableName of PUBLIC_VARIABLE_NAMES) {
+  for (const variableName of PUBLIC_ENVIRONMENT_VARIABLE_NAMES) {
     readRequiredValue(environmentValues, variableName);
   }
 

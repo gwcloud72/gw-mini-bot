@@ -1,4 +1,10 @@
 import { getPublicAppConfig } from '@/config/publicAppConfig';
+import {
+  MINICHAT_STREAM_EVENT,
+  MINICHAT_STREAM_PHASE,
+  MINICHAT_STREAM_PROTOCOL_HEADER,
+  MINICHAT_STREAM_PROTOCOL_VERSION,
+} from '../../shared/protocol';
 import { SseParser, type ParsedSseEvent } from '@/lib/sse';
 import type {
   ChatQuotaStatus,
@@ -25,12 +31,21 @@ interface ChatApiErrorPayload {
   };
 }
 
+interface ChatStreamReadyPayload {
+  protocolVersion?: string;
+}
+
 interface ChatStreamChunkPayload {
   text?: string;
 }
 
 interface ChatStreamStatusPayload {
   phase?: string;
+}
+
+interface ChatHealthPayload {
+  ok?: boolean;
+  protocolVersion?: string;
 }
 
 interface ChatApiErrorOptions {
@@ -208,12 +223,17 @@ export function readChatQuotaStatus(
   };
 }
 
-function handleChatStreamEvent(
-  parsedSseEvent: ParsedSseEvent,
-  streamCallbacks: Pick<
+interface InternalChatStreamCallbacks
+  extends Pick<
     ChatResponseStreamOptions,
     'onTextChunk' | 'onComplete' | 'onProgress'
-  >,
+  > {
+  onReady: () => void;
+}
+
+function handleChatStreamEvent(
+  parsedSseEvent: ParsedSseEvent,
+  streamCallbacks: InternalChatStreamCallbacks,
 ): void {
   if (!parsedSseEvent.data) {
     return;
@@ -231,29 +251,45 @@ function handleChatStreamEvent(
   }
 
   switch (parsedSseEvent.event) {
-    case 'ready':
+    case MINICHAT_STREAM_EVENT.ready: {
+      const readyPayload = parsedEventPayload as ChatStreamReadyPayload;
+      if (
+        readyPayload.protocolVersion !== MINICHAT_STREAM_PROTOCOL_VERSION
+      ) {
+        throw new ChatApiError(
+          '대화 화면과 서버 버전이 맞지 않습니다. 페이지를 새로고침해주세요.',
+          {
+            errorCode: 'INCOMPATIBLE_CHAT_PROTOCOL',
+            isRetryable: true,
+          },
+        );
+      }
+      streamCallbacks.onReady();
       streamCallbacks.onProgress?.('ready');
       break;
-    case 'status': {
+    }
+    case MINICHAT_STREAM_EVENT.status: {
       const streamStatus = parsedEventPayload as ChatStreamStatusPayload;
-      if (streamStatus.phase === 'generating') {
+      if (
+        streamStatus.phase === MINICHAT_STREAM_PHASE.generating
+      ) {
         streamCallbacks.onProgress?.('generating');
       }
       break;
     }
-    case 'chunk': {
+    case MINICHAT_STREAM_EVENT.chunk: {
       const textChunk = (parsedEventPayload as ChatStreamChunkPayload).text;
       if (typeof textChunk === 'string' && textChunk.length > 0) {
         streamCallbacks.onTextChunk(textChunk);
       }
       break;
     }
-    case 'done':
+    case MINICHAT_STREAM_EVENT.done:
       streamCallbacks.onComplete?.(
         parsedEventPayload as ChatStreamCompletionMetadata,
       );
       break;
-    case 'error': {
+    case MINICHAT_STREAM_EVENT.error: {
       const errorPayload = parsedEventPayload as ChatApiErrorPayload;
       throw new ChatApiError(
         errorPayload.error?.message ?? '답변 생성 중 문제가 생겼습니다.',
@@ -265,6 +301,22 @@ function handleChatStreamEvent(
     }
     default:
       break;
+  }
+}
+
+function assertCompatibleChatProtocol(chatResponse: Response): void {
+  const responseProtocolVersion = chatResponse.headers.get(
+    MINICHAT_STREAM_PROTOCOL_HEADER,
+  );
+
+  if (responseProtocolVersion !== MINICHAT_STREAM_PROTOCOL_VERSION) {
+    throw new ChatApiError(
+      '대화 화면과 서버 버전이 맞지 않습니다. 페이지를 새로고침해주세요.',
+      {
+        errorCode: 'INCOMPATIBLE_CHAT_PROTOCOL',
+        isRetryable: true,
+      },
+    );
   }
 }
 
@@ -301,6 +353,8 @@ export async function streamChatResponse(
       headers: {
         Accept: 'text/event-stream',
         'Content-Type': 'application/json',
+        [MINICHAT_STREAM_PROTOCOL_HEADER]:
+          MINICHAT_STREAM_PROTOCOL_VERSION,
       },
       body: JSON.stringify({ messages: streamOptions.requestMessages }),
       signal: inactivityAbortController.signal,
@@ -313,6 +367,8 @@ export async function streamChatResponse(
     if (!chatResponse.ok) {
       throw await readChatApiErrorResponse(chatResponse);
     }
+
+    assertCompatibleChatProtocol(chatResponse);
 
     if (!isEventStreamResponse(chatResponse)) {
       throw new ChatApiError('챗봇 서버의 응답 형식이 올바르지 않습니다.', {
@@ -337,14 +393,51 @@ export async function streamChatResponse(
     const responseStreamReader = chatResponse.body.getReader();
     const responseTextDecoder = new TextDecoder();
     const sseParser = new SseParser();
+    let hasReceivedReadyEvent = false;
     let hasReceivedCompletionEvent = false;
     let receivedResponseCharacterCount = 0;
 
-    const streamCallbacks: Pick<
-      ChatResponseStreamOptions,
-      'onTextChunk' | 'onComplete' | 'onProgress'
-    > = {
+    const assertReadyEventReceived = () => {
+      if (!hasReceivedReadyEvent) {
+        throw new ChatApiError(
+          '대화 서버가 준비되기 전에 응답 데이터를 보냈습니다.',
+          {
+            errorCode: 'INVALID_STREAM_SEQUENCE',
+            isRetryable: true,
+          },
+        );
+      }
+    };
+
+    const assertStreamNotCompleted = () => {
+      if (hasReceivedCompletionEvent) {
+        throw new ChatApiError(
+          '대화 서버가 완료 이벤트 뒤에 추가 데이터를 보냈습니다.',
+          {
+            errorCode: 'INVALID_STREAM_SEQUENCE',
+            isRetryable: true,
+          },
+        );
+      }
+    };
+
+    const streamCallbacks: InternalChatStreamCallbacks = {
+      onReady: () => {
+        assertStreamNotCompleted();
+        if (hasReceivedReadyEvent) {
+          throw new ChatApiError(
+            '대화 서버가 준비 이벤트를 중복 전송했습니다.',
+            {
+              errorCode: 'INVALID_STREAM_SEQUENCE',
+              isRetryable: true,
+            },
+          );
+        }
+        hasReceivedReadyEvent = true;
+      },
       onTextChunk: (textChunk) => {
+        assertReadyEventReceived();
+        assertStreamNotCompleted();
         receivedResponseCharacterCount += textChunk.length;
         if (
           receivedResponseCharacterCount > publicAppConfig.maxResponseLength
@@ -358,8 +451,14 @@ export async function streamChatResponse(
 
         streamOptions.onTextChunk(textChunk);
       },
-      onProgress: streamOptions.onProgress,
+      onProgress: (streamProgress) => {
+        assertReadyEventReceived();
+        assertStreamNotCompleted();
+        streamOptions.onProgress?.(streamProgress);
+      },
       onComplete: (completionMetadata) => {
+        assertReadyEventReceived();
+        assertStreamNotCompleted();
         hasReceivedCompletionEvent = true;
         streamOptions.onComplete?.(completionMetadata);
       },
@@ -395,6 +494,16 @@ export async function streamChatResponse(
 
       for (const parsedSseEvent of sseParser.flush()) {
         handleChatStreamEvent(parsedSseEvent, streamCallbacks);
+      }
+
+      if (!hasReceivedReadyEvent) {
+        throw new ChatApiError(
+          '대화 서버가 연결 준비 이벤트를 보내지 않았습니다.',
+          {
+            errorCode: 'MISSING_READY_EVENT',
+            isRetryable: true,
+          },
+        );
       }
 
       if (!hasReceivedCompletionEvent) {
@@ -452,7 +561,22 @@ export async function checkChatApiHealth(
       referrerPolicy: 'no-referrer',
     });
 
-    return healthResponse.ok;
+    if (!healthResponse.ok) {
+      return false;
+    }
+
+    if (
+      healthResponse.headers.get(MINICHAT_STREAM_PROTOCOL_HEADER) !==
+      MINICHAT_STREAM_PROTOCOL_VERSION
+    ) {
+      return false;
+    }
+
+    const healthPayload = (await healthResponse.json()) as ChatHealthPayload;
+    return (
+      healthPayload.ok === true &&
+      healthPayload.protocolVersion === MINICHAT_STREAM_PROTOCOL_VERSION
+    );
   } catch {
     return false;
   } finally {

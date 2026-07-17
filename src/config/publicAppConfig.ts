@@ -1,3 +1,5 @@
+import type { PublicEnvironmentVariableName } from '../../shared/publicEnvironmentContract';
+
 export type AppEnvironment = 'development' | 'production';
 
 export interface PublicAppConfig {
@@ -75,17 +77,9 @@ function readAppEnvironment(rawValue: string | undefined): AppEnvironment {
 }
 
 export function readPublicAppConfig(
-  environmentValues: Pick<
-    ImportMetaEnv,
-    | 'VITE_API_BASE_URL'
-    | 'VITE_API_ORIGIN'
-    | 'VITE_APP_ENVIRONMENT'
-    | 'VITE_REQUEST_TIMEOUT_MS'
-    | 'VITE_HEALTH_TIMEOUT_MS'
-    | 'VITE_MAX_MESSAGE_LENGTH'
-    | 'VITE_MAX_RESPONSE_LENGTH'
-    | 'VITE_MAX_CONTEXT_MESSAGES'
-    | 'VITE_MAX_PERSISTED_MESSAGES'
+  environmentValues: Omit<
+    Pick<ImportMetaEnv, PublicEnvironmentVariableName>,
+    'VITE_DEPLOYMENT_REPOSITORY'
   >,
 ): PublicAppConfig {
   const appEnvironment = readAppEnvironment(
