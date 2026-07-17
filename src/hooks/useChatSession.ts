@@ -351,20 +351,18 @@ export function useChatSession() {
         window.clearTimeout(delayedProgressTimeoutId);
         streamingTextPresenter.dispose();
 
-        if (!isCurrentStream()) {
-          return;
-        }
+        if (isCurrentStream()) {
+          if (latestQuotaStatus?.remainingRequests === 0) {
+            revealDailyQuotaNotice(latestQuotaStatus);
+          }
 
-        if (latestQuotaStatus?.remainingRequests === 0) {
-          revealDailyQuotaNotice(latestQuotaStatus);
+          isStreamActiveRef.current = false;
+          streamAbortControllerRef.current = null;
+          setChatSessionState((currentState) => ({
+            ...currentState,
+            isStreaming: false,
+          }));
         }
-
-        isStreamActiveRef.current = false;
-        streamAbortControllerRef.current = null;
-        setChatSessionState((currentState) => ({
-          ...currentState,
-          isStreaming: false,
-        }));
       }
     },
     [revealDailyQuotaNotice, updateAssistantMessage],
