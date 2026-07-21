@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  bindDocumentMotionState,
   cancelVisualFrame,
   getMotionAwareScrollBehavior,
   isReducedMotionPreferred,
@@ -11,6 +12,14 @@ interface MotionQueryHarness {
   mediaQueryList: MediaQueryList;
   emitChange: (matches: boolean) => void;
   getListenerCount: () => number;
+}
+
+interface VisibilityHarness {
+  documentValue: Document;
+  setVisibility: (visibilityState: DocumentVisibilityState) => void;
+  emitVisibilityChange: () => void;
+  getListenerCount: () => number;
+  dataset: DOMStringMap;
 }
 
 function createMotionQueryHarness(
@@ -65,6 +74,55 @@ function createMotionQueryHarness(
   };
 }
 
+function createVisibilityHarness(
+  initialVisibilityState: DocumentVisibilityState,
+): VisibilityHarness {
+  const listeners = new Set<EventListenerOrEventListenerObject>();
+  let currentVisibilityState = initialVisibilityState;
+  const dataset = {} as DOMStringMap;
+  const documentValue = {
+    documentElement: { dataset },
+    get visibilityState() {
+      return currentVisibilityState;
+    },
+    addEventListener: (
+      eventName: string,
+      listener: EventListenerOrEventListenerObject,
+    ) => {
+      if (eventName === 'visibilitychange') {
+        listeners.add(listener);
+      }
+    },
+    removeEventListener: (
+      eventName: string,
+      listener: EventListenerOrEventListenerObject,
+    ) => {
+      if (eventName === 'visibilitychange') {
+        listeners.delete(listener);
+      }
+    },
+  } as unknown as Document;
+
+  return {
+    documentValue,
+    setVisibility: (visibilityState) => {
+      currentVisibilityState = visibilityState;
+    },
+    emitVisibilityChange: () => {
+      const visibilityEvent = { type: 'visibilitychange' } as Event;
+      for (const listener of listeners) {
+        if (typeof listener === 'function') {
+          listener(visibilityEvent);
+        } else {
+          listener.handleEvent(visibilityEvent);
+        }
+      }
+    },
+    getListenerCount: () => listeners.size,
+    dataset,
+  };
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -105,7 +163,33 @@ describe('browser motion compatibility', () => {
     expect(motionQueryHarness.getListenerCount()).toBe(0);
   });
 
-  it('uses requestAnimationFrame when the browser provides it', () => {
+  it('keeps document motion and page visibility attributes synchronized', () => {
+    const motionQueryHarness = createMotionQueryHarness(false, 'modern');
+    const visibilityHarness = createVisibilityHarness('visible');
+    vi.stubGlobal('window', {
+      matchMedia: () => motionQueryHarness.mediaQueryList,
+    });
+    vi.stubGlobal('document', visibilityHarness.documentValue);
+
+    const releaseMotionState = bindDocumentMotionState();
+
+    expect(visibilityHarness.dataset.motionPreference).toBe('full');
+    expect(visibilityHarness.dataset.pageVisibility).toBe('visible');
+
+    motionQueryHarness.emitChange(true);
+    visibilityHarness.setVisibility('hidden');
+    visibilityHarness.emitVisibilityChange();
+
+    expect(visibilityHarness.dataset.motionPreference).toBe('reduced');
+    expect(visibilityHarness.dataset.pageVisibility).toBe('hidden');
+
+    releaseMotionState();
+
+    expect(motionQueryHarness.getListenerCount()).toBe(0);
+    expect(visibilityHarness.getListenerCount()).toBe(0);
+  });
+
+  it('uses requestAnimationFrame when both frame APIs are available', () => {
     const requestAnimationFrame = vi.fn((frameCallback: () => void) => {
       void frameCallback;
       return 41;
@@ -141,6 +225,25 @@ describe('browser motion compatibility', () => {
     expect(frameId).toBe(17);
     expect(setTimeout).toHaveBeenCalledTimes(1);
     expect(clearTimeout).toHaveBeenCalledWith(17);
+  });
+
+  it('uses the timer fallback when frame cancellation is unavailable', () => {
+    const requestAnimationFrame = vi.fn(() => 41);
+    const setTimeout = vi.fn(() => 23);
+    const clearTimeout = vi.fn();
+    vi.stubGlobal('window', {
+      requestAnimationFrame,
+      setTimeout,
+      clearTimeout,
+    });
+
+    const frameId = requestVisualFrame(() => undefined);
+    cancelVisualFrame(frameId);
+
+    expect(frameId).toBe(23);
+    expect(requestAnimationFrame).not.toHaveBeenCalled();
+    expect(setTimeout).toHaveBeenCalledTimes(1);
+    expect(clearTimeout).toHaveBeenCalledWith(23);
   });
 
   it('disables smooth scrolling when reduced motion is enabled', () => {

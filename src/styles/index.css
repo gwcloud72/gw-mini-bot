@@ -41,9 +41,9 @@
     --type-letter-spacing-badge: 0.012em;
     --type-letter-spacing-mono: 0;
 
-    --color-app-background: #f5f4f6;
-    --color-app-ambient-primary: rgba(236, 177, 199, 0.34);
-    --color-app-ambient-secondary: rgba(201, 190, 235, 0.28);
+    --color-app-background: #f5f5f6;
+    --color-app-ambient-primary: rgba(132, 136, 150, 0.18);
+    --color-app-ambient-secondary: rgba(177, 180, 190, 0.16);
     --color-surface-default: #ffffff;
     --color-surface-raised: #ffffff;
     --color-surface-soft: #f7f7f8;
@@ -57,20 +57,20 @@
     --color-border-default: #e7e7ea;
     --color-border-strong: #d9d9de;
     --color-interaction-hover: rgba(31, 32, 36, 0.055);
-    --color-accent-default: #e45d8c;
-    --color-accent-strong: #c94a78;
-    --color-accent-soft: #f8e4eb;
+    --color-accent-default: #737884;
+    --color-accent-strong: #585d68;
+    --color-accent-soft: #e8e9ec;
     --color-accent-foreground: #ffffff;
-    --color-chat-background: #f8f7f9;
-    --color-chat-ambient: rgba(231, 168, 192, 0.22);
-    --color-user-bubble-start: #ec6a97;
-    --color-user-bubble-end: #d95182;
+    --color-chat-background: #f8f8f9;
+    --color-chat-ambient: rgba(132, 136, 150, 0.15);
+    --color-user-bubble-start: #7d828d;
+    --color-user-bubble-end: #646974;
     --color-assistant-bubble: rgba(255, 255, 255, 0.92);
-    --color-avatar-background-start: #ed6d99;
-    --color-avatar-background-end: #d54d7e;
+    --color-avatar-background-start: #7d828d;
+    --color-avatar-background-end: #646974;
     --color-avatar-foreground: #ffffff;
-    --color-avatar-detail: #dc5787;
-    --color-focus-ring: #c94a78;
+    --color-avatar-detail: #6c717c;
+    --color-focus-ring: #585d68;
     --color-success: #34a56f;
     --color-warning-surface: #fff7e8;
     --color-warning-foreground: #6e4a12;
@@ -79,6 +79,18 @@
     --color-code-background: #202126;
     --color-code-foreground: #f4f4f5;
     --shadow-color-rgb: 41, 35, 42;
+    --color-season-secondary: #7d828d;
+    --season-character-image: none;
+    --season-avatar-image: none;
+    --season-pattern-image: none;
+    --season-particle-image: none;
+    --season-scene-background: linear-gradient(180deg, #fafafa, #f6f6f7);
+    --season-hero-background: linear-gradient(135deg, #ffffff, #f6f6f7);
+    --season-hero-border: #e5e5e8;
+    --season-character-shadow: rgba(62, 64, 72, 0.2);
+    --season-header-highlight: rgba(125, 130, 141, 0.12);
+    --season-particle-opacity: 0.36;
+    --season-particle-opacity-muted: 0.28;
 
     --radius-shell: 2rem;
     --motion-duration-fast: 110ms;
@@ -99,58 +111,160 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  [data-skin="spring"] {
+    --color-app-background: #f8f2f4;
+    --color-app-ambient-primary: rgba(239, 174, 194, 0.34);
+    --color-app-ambient-secondary: rgba(198, 213, 177, 0.2);
+    --color-surface-default: #fffdfd;
+    --color-surface-raised: #ffffff;
+    --color-surface-soft: #fff6f8;
+    --color-surface-muted: #f8edf1;
+    --color-header-background: rgba(255, 251, 252, 0.9);
+    --color-composer-background: rgba(255, 250, 252, 0.92);
+    --color-border-default: #eedde3;
+    --color-border-strong: #dfc8d0;
+    --color-accent-default: #e56f88;
+    --color-accent-strong: #c8526e;
+    --color-accent-soft: #f8e2e8;
+    --color-chat-background: #fff9fb;
+    --color-chat-ambient: rgba(235, 156, 181, 0.21);
+    --color-user-bubble-start: #ed8296;
+    --color-user-bubble-end: #d75c78;
+    --color-assistant-bubble: rgba(255, 253, 253, 0.96);
+    --color-avatar-background-start: #f5c7d2;
+    --color-avatar-background-end: #e7889e;
+    --color-avatar-detail: #c8526e;
+    --color-focus-ring: #c8526e;
+    --shadow-color-rgb: 82, 48, 60;
+    --color-season-secondary: #789c71;
+    --season-character-image: url("../assets/seasons/spring-character.png");
+    --season-avatar-image: url("../assets/seasons/spring-avatar.png");
+    --season-pattern-image: url("../assets/seasons/spring-pattern.svg");
+    --season-particle-image: url("../assets/seasons/spring-particle.svg");
+    --season-scene-background: radial-gradient(circle at 18% 12%, rgba(250, 218, 228, 0.78), transparent 27rem), linear-gradient(145deg, #fff9fb 0%, #fffdfd 54%, #f8f3f5 100%);
+    --season-hero-background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 239, 245, 0.92));
+    --season-hero-border: #efd9e1;
+    --season-character-shadow: rgba(189, 89, 117, 0.24);
+    --season-header-highlight: rgba(245, 184, 201, 0.24);
+    --season-particle-opacity: 0.5;
+    --season-particle-opacity-muted: 0.4;
+  }
+
   [data-skin="summer"] {
-    --color-app-background: #f2f6f7;
-    --color-app-ambient-primary: rgba(84, 181, 214, 0.25);
-    --color-app-ambient-secondary: rgba(125, 215, 203, 0.22);
-    --color-accent-default: #2a8db4;
-    --color-accent-strong: #19779a;
-    --color-accent-soft: #dceff5;
-    --color-chat-background: #f5f8f9;
-    --color-chat-ambient: rgba(72, 174, 208, 0.18);
-    --color-user-bubble-start: #3a9fc3;
-    --color-user-bubble-end: #247fa4;
-    --color-avatar-background-start: #3aa0c4;
-    --color-avatar-background-end: #217da2;
-    --color-avatar-detail: #2685aa;
-    --color-focus-ring: #19779a;
-    --shadow-color-rgb: 35, 66, 77;
+    --color-app-background: #eef8fb;
+    --color-app-ambient-primary: rgba(84, 185, 220, 0.28);
+    --color-app-ambient-secondary: rgba(106, 208, 192, 0.22);
+    --color-surface-default: #fbfeff;
+    --color-surface-raised: #ffffff;
+    --color-surface-soft: #f2fbfd;
+    --color-surface-muted: #e6f5f8;
+    --color-header-background: rgba(248, 253, 255, 0.9);
+    --color-composer-background: rgba(247, 253, 255, 0.92);
+    --color-border-default: #d6eaf0;
+    --color-border-strong: #bfdde6;
+    --color-accent-default: #2e9fc6;
+    --color-accent-strong: #187da3;
+    --color-accent-soft: #d9f0f6;
+    --color-chat-background: #f4fbfd;
+    --color-chat-ambient: rgba(62, 174, 210, 0.18);
+    --color-user-bubble-start: #3aa9cf;
+    --color-user-bubble-end: #2388b2;
+    --color-assistant-bubble: rgba(252, 255, 255, 0.96);
+    --color-avatar-background-start: #a8e2ee;
+    --color-avatar-background-end: #4aafd0;
+    --color-avatar-detail: #187da3;
+    --color-focus-ring: #187da3;
+    --shadow-color-rgb: 32, 75, 91;
+    --color-season-secondary: #55ae96;
+    --season-character-image: url("../assets/seasons/summer-character.png");
+    --season-avatar-image: url("../assets/seasons/summer-avatar.png");
+    --season-pattern-image: url("../assets/seasons/summer-pattern.svg");
+    --season-particle-image: url("../assets/seasons/summer-particle.svg");
+    --season-scene-background: radial-gradient(circle at 80% 8%, rgba(157, 225, 241, 0.68), transparent 26rem), linear-gradient(150deg, #f5fcfe 0%, #fbfeff 51%, #ecf8fb 100%);
+    --season-hero-background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(225, 247, 251, 0.94));
+    --season-hero-border: #cfe8ee;
+    --season-character-shadow: rgba(30, 132, 168, 0.23);
+    --season-header-highlight: rgba(131, 213, 231, 0.22);
+    --season-particle-opacity: 0.48;
+    --season-particle-opacity-muted: 0.38;
   }
 
   [data-skin="autumn"] {
-    --color-app-background: #f6f3ef;
-    --color-app-ambient-primary: rgba(216, 145, 91, 0.27);
-    --color-app-ambient-secondary: rgba(211, 187, 127, 0.2);
-    --color-accent-default: #c56c3d;
-    --color-accent-strong: #a9542b;
-    --color-accent-soft: #f2e3d7;
-    --color-chat-background: #f9f7f4;
-    --color-chat-ambient: rgba(198, 113, 65, 0.17);
-    --color-user-bubble-start: #d27b4c;
-    --color-user-bubble-end: #b75a2f;
-    --color-avatar-background-start: #d17a4b;
-    --color-avatar-background-end: #b2582f;
-    --color-avatar-detail: #bc6035;
-    --color-focus-ring: #a9542b;
-    --shadow-color-rgb: 68, 49, 36;
+    --color-app-background: #f8f1e9;
+    --color-app-ambient-primary: rgba(218, 139, 82, 0.3);
+    --color-app-ambient-secondary: rgba(170, 151, 91, 0.2);
+    --color-surface-default: #fffdf9;
+    --color-surface-raised: #ffffff;
+    --color-surface-soft: #fff7ed;
+    --color-surface-muted: #f7eadb;
+    --color-header-background: rgba(255, 252, 247, 0.9);
+    --color-composer-background: rgba(255, 250, 244, 0.92);
+    --color-border-default: #ead8c6;
+    --color-border-strong: #d9bea6;
+    --color-accent-default: #c96a38;
+    --color-accent-strong: #a54e26;
+    --color-accent-soft: #f4dfcf;
+    --color-chat-background: #fff9f2;
+    --color-chat-ambient: rgba(198, 105, 55, 0.18);
+    --color-user-bubble-start: #d87a43;
+    --color-user-bubble-end: #b9582c;
+    --color-assistant-bubble: rgba(255, 253, 249, 0.96);
+    --color-avatar-background-start: #edbe8c;
+    --color-avatar-background-end: #c96a38;
+    --color-avatar-detail: #9e4d2b;
+    --color-focus-ring: #a54e26;
+    --shadow-color-rgb: 79, 54, 35;
+    --color-season-secondary: #7e8951;
+    --season-character-image: url("../assets/seasons/autumn-character.png");
+    --season-avatar-image: url("../assets/seasons/autumn-avatar.png");
+    --season-pattern-image: url("../assets/seasons/autumn-pattern.svg");
+    --season-particle-image: url("../assets/seasons/autumn-particle.svg");
+    --season-scene-background: radial-gradient(circle at 16% 84%, rgba(235, 185, 129, 0.45), transparent 26rem), linear-gradient(145deg, #fffaf3 0%, #fffdf9 54%, #f7eee4 100%);
+    --season-hero-background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(251, 232, 211, 0.92));
+    --season-hero-border: #e7d0bb;
+    --season-character-shadow: rgba(161, 76, 38, 0.23);
+    --season-header-highlight: rgba(226, 157, 101, 0.22);
+    --season-particle-opacity: 0.5;
+    --season-particle-opacity-muted: 0.4;
   }
 
   [data-skin="winter"] {
-    --color-app-background: #f3f4f8;
-    --color-app-ambient-primary: rgba(112, 127, 213, 0.24);
-    --color-app-ambient-secondary: rgba(163, 176, 226, 0.22);
-    --color-accent-default: #6674d2;
-    --color-accent-strong: #4f5db8;
-    --color-accent-soft: #e5e8f9;
-    --color-chat-background: #f6f7fa;
-    --color-chat-ambient: rgba(103, 118, 207, 0.17);
-    --color-user-bubble-start: #7582dc;
-    --color-user-bubble-end: #5b69c6;
-    --color-avatar-background-start: #7582db;
-    --color-avatar-background-end: #5967c4;
-    --color-avatar-detail: #5e6bc9;
-    --color-focus-ring: #4f5db8;
-    --shadow-color-rgb: 47, 52, 83;
+    --color-app-background: #eff4fb;
+    --color-app-ambient-primary: rgba(116, 141, 213, 0.27);
+    --color-app-ambient-secondary: rgba(178, 199, 235, 0.24);
+    --color-surface-default: #fcfdff;
+    --color-surface-raised: #ffffff;
+    --color-surface-soft: #f3f7fd;
+    --color-surface-muted: #e8eef8;
+    --color-header-background: rgba(249, 252, 255, 0.9);
+    --color-composer-background: rgba(248, 251, 255, 0.92);
+    --color-border-default: #d8e0ef;
+    --color-border-strong: #c3cee4;
+    --color-accent-default: #6077c8;
+    --color-accent-strong: #445bab;
+    --color-accent-soft: #e0e7f8;
+    --color-chat-background: #f6f9ff;
+    --color-chat-ambient: rgba(96, 119, 200, 0.17);
+    --color-user-bubble-start: #758ade;
+    --color-user-bubble-end: #5369bb;
+    --color-assistant-bubble: rgba(252, 253, 255, 0.96);
+    --color-avatar-background-start: #b9c9ef;
+    --color-avatar-background-end: #6077c8;
+    --color-avatar-detail: #445bab;
+    --color-focus-ring: #445bab;
+    --shadow-color-rgb: 48, 56, 89;
+    --color-season-secondary: #7fa3d9;
+    --season-character-image: url("../assets/seasons/winter-character.png");
+    --season-avatar-image: url("../assets/seasons/winter-avatar.png");
+    --season-pattern-image: url("../assets/seasons/winter-pattern.svg");
+    --season-particle-image: url("../assets/seasons/winter-particle.svg");
+    --season-scene-background: radial-gradient(circle at 82% 12%, rgba(190, 207, 241, 0.64), transparent 27rem), linear-gradient(150deg, #f7faff 0%, #fcfdff 52%, #edf3fb 100%);
+    --season-hero-background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(227, 235, 250, 0.94));
+    --season-hero-border: #d3dced;
+    --season-character-shadow: rgba(66, 88, 158, 0.22);
+    --season-header-highlight: rgba(157, 178, 226, 0.22);
+    --season-particle-opacity: 0.5;
+    --season-particle-opacity-muted: 0.4;
   }
 
   *,
@@ -281,6 +395,13 @@
     animation-play-state: paused;
   }
 
+  .app-backdrop[data-streaming="true"] :where(
+      .seasonal-scene-gradient,
+      .seasonal-particle
+    ) {
+    animation-play-state: paused;
+  }
+
   .chat-shell {
     border: 1px solid color-mix(in srgb, var(--color-border-default) 78%, white);
     background: var(--color-surface-default);
@@ -296,7 +417,8 @@
 
   .chat-header {
     border-bottom: 1px solid color-mix(in srgb, var(--color-border-default) 82%, transparent);
-    background: var(--color-header-background);
+    background-color: var(--color-header-background);
+    background-image: linear-gradient(110deg, var(--season-header-highlight), transparent 42%);
     transition:
       background-color var(--motion-duration-base) var(--motion-easing-standard),
       border-color var(--motion-duration-base) var(--motion-easing-standard);
@@ -309,17 +431,12 @@
     flex: none;
     place-items: center;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.54);
+    border: 1px solid color-mix(in srgb, var(--color-border-default) 76%, white);
     border-radius: 14px;
-    color: var(--color-avatar-foreground);
-    background: linear-gradient(
-      145deg,
-      var(--color-avatar-background-start),
-      var(--color-avatar-background-end)
-    );
+    background: linear-gradient(145deg, var(--color-avatar-background-start), var(--color-avatar-background-end));
     box-shadow:
-      0 8px 20px color-mix(in srgb, var(--color-accent-default) 24%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      0 8px 20px color-mix(in srgb, var(--color-accent-default) 22%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.46);
     transition:
       background-color var(--motion-duration-base) var(--motion-easing-standard),
       box-shadow var(--motion-duration-base) var(--motion-easing-standard),
@@ -328,26 +445,39 @@
 
   .brand-avatar::after {
     position: absolute;
-    top: -32%;
-    left: -20%;
-    width: 72%;
-    height: 72%;
+    z-index: 2;
+    top: -38%;
+    left: -24%;
+    width: 76%;
+    height: 76%;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.26);
     content: "";
+    pointer-events: none;
   }
 
-  .brand-avatar-bubble {
-    fill: var(--color-avatar-foreground);
+  .brand-avatar-character {
+    position: absolute;
+    z-index: 1;
+    inset: -7%;
+    background-image: var(--season-avatar-image);
+    background-repeat: no-repeat;
+    background-position: center 10%;
+    background-size: contain;
   }
 
-  .brand-avatar-eye {
-    fill: var(--color-avatar-detail);
+  .brand-avatar-shine {
+    position: absolute;
+    z-index: 3;
+    right: 8%;
+    bottom: 8%;
+    width: 18%;
+    aspect-ratio: 1;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-default) 18%, transparent);
   }
 
-  .brand-avatar-sparkle {
-    fill: var(--color-avatar-foreground);
-  }
 
   .chat-title {
     color: var(--color-text-primary);
@@ -466,11 +596,232 @@
 
   .chat-wallpaper {
     position: relative;
+    background: transparent;
+  }
+
+  .message-area {
     background-color: var(--color-chat-background);
-    background-image:
-      radial-gradient(circle at 50% -12%, var(--color-chat-ambient), transparent 28rem),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.42), transparent 10rem);
     transition: background-color var(--motion-duration-base) var(--motion-easing-standard);
+  }
+
+  .seasonal-scene {
+    z-index: 0;
+    contain: paint;
+    background: var(--season-scene-background);
+    isolation: isolate;
+    pointer-events: none;
+    animation: season-scene-enter 180ms var(--motion-easing-standard) both;
+  }
+
+  .seasonal-scene-gradient {
+    position: absolute;
+    border-radius: 999px;
+    opacity: 0.58;
+    backface-visibility: hidden;
+    animation: season-scene-breathe 9s ease-in-out infinite alternate;
+  }
+
+  .seasonal-scene-gradient-primary {
+    top: -12rem;
+    right: -9rem;
+    width: 28rem;
+    height: 28rem;
+    background: var(--color-app-ambient-primary);
+  }
+
+  .seasonal-scene-gradient-secondary {
+    bottom: -15rem;
+    left: -10rem;
+    width: 32rem;
+    height: 32rem;
+    background: var(--color-app-ambient-secondary);
+    animation-delay: -4s;
+  }
+
+  .seasonal-scene-pattern {
+    position: absolute;
+    inset: 0;
+    background-image: var(--season-pattern-image);
+    background-repeat: no-repeat;
+    background-position: right top;
+    background-size: min(70%, 42rem) auto;
+    opacity: 0.82;
+  }
+
+  .seasonal-particle {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    background-image: var(--season-particle-image);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    opacity: var(--season-particle-opacity);
+    backface-visibility: hidden;
+    animation: season-particle-drift 14s linear infinite;
+  }
+
+  .seasonal-particle-0 {
+    top: 8%;
+    left: 9%;
+    animation-delay: -3s;
+  }
+
+  .seasonal-particle-1 {
+    top: 18%;
+    right: 15%;
+    width: 18px;
+    height: 18px;
+    animation-delay: -9s;
+    animation-duration: 17s;
+  }
+
+  .seasonal-particle-2 {
+    top: 39%;
+    left: 17%;
+    width: 16px;
+    height: 16px;
+    animation-delay: -6s;
+    animation-duration: 19s;
+  }
+
+  .seasonal-particle-3 {
+    top: 48%;
+    right: 8%;
+    width: 25px;
+    height: 25px;
+    animation-delay: -12s;
+    animation-duration: 18s;
+  }
+
+  .seasonal-particle-4 {
+    bottom: 28%;
+    left: 7%;
+    width: 19px;
+    height: 19px;
+    animation-delay: -8s;
+    animation-duration: 16s;
+  }
+
+  .seasonal-particle-5 {
+    right: 23%;
+    bottom: 18%;
+    width: 15px;
+    height: 15px;
+    animation-delay: -2s;
+    animation-duration: 20s;
+  }
+
+  .seasonal-particle-6 {
+    right: 7%;
+    bottom: 7%;
+    width: 17px;
+    height: 17px;
+    animation-delay: -10s;
+    animation-duration: 15s;
+  }
+
+  .seasonal-particle-7 {
+    bottom: 9%;
+    left: 34%;
+    width: 13px;
+    height: 13px;
+    animation-delay: -5s;
+    animation-duration: 21s;
+  }
+
+  .season-hero-card {
+    border: 1px solid var(--season-hero-border);
+    border-radius: 28px;
+    background: var(--season-hero-background);
+    box-shadow:
+      0 22px 56px color-mix(in srgb, var(--color-accent-default) 10%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    animation: intro-item-enter 240ms var(--motion-easing-emphasized) 30ms both;
+  }
+
+  .season-hero-card::before {
+    position: absolute;
+    inset: 0;
+    background-image: var(--season-pattern-image);
+    background-repeat: no-repeat;
+    background-position: right top;
+    background-size: 28rem auto;
+    content: "";
+    opacity: 0.58;
+    pointer-events: none;
+  }
+
+  .season-hero-card::after {
+    position: absolute;
+    right: 8.5rem;
+    bottom: -7rem;
+    width: 18rem;
+    height: 18rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-accent-soft) 72%, transparent);
+    content: "";
+    opacity: 0.78;
+    pointer-events: none;
+  }
+
+  .season-hero-copy {
+    animation: intro-item-enter 220ms var(--motion-easing-emphasized) 70ms both;
+  }
+
+  .season-hero-chip {
+    border: 1px solid color-mix(in srgb, var(--color-accent-default) 24%, transparent);
+    color: var(--color-accent-strong);
+    background: color-mix(in srgb, var(--color-accent-soft) 70%, white);
+    font-size: var(--type-size-caption);
+    font-weight: var(--type-weight-semibold);
+    line-height: var(--type-line-height-snug);
+    letter-spacing: var(--type-letter-spacing-label);
+  }
+
+  .seasonal-character {
+    position: relative;
+    z-index: 2;
+    width: 230px;
+    height: 230px;
+    flex: none;
+    animation: season-character-enter 260ms var(--motion-easing-emphasized) 80ms both;
+  }
+
+  .seasonal-character-halo {
+    position: absolute;
+    top: 16%;
+    left: 50%;
+    width: 78%;
+    aspect-ratio: 1;
+    border-radius: 999px;
+    background: radial-gradient(circle, color-mix(in srgb, var(--color-accent-soft) 86%, white), transparent 70%);
+    transform: translateX(-50%);
+  }
+
+  .seasonal-character-image {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    background-image: var(--season-character-image);
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: contain;
+    backface-visibility: hidden;
+    animation: season-character-float 4.8s ease-in-out infinite;
+  }
+
+  .seasonal-character-shadow {
+    position: absolute;
+    z-index: 1;
+    right: 18%;
+    bottom: 2%;
+    left: 18%;
+    height: 16px;
+    border-radius: 999px;
+    background: var(--season-character-shadow);
+    filter: blur(8px);
+    opacity: 0.46;
   }
 
   :where(.chat-wallpaper, .composer-textarea, .menu-panel)::-webkit-scrollbar {
@@ -488,32 +839,8 @@
   }
 
   .conversation-intro {
-    min-height: min(650px, 100%);
+    min-height: min(670px, 100%);
     animation: intro-enter 180ms var(--motion-easing-standard) both;
-  }
-
-  .intro-avatar-wrap {
-    filter: drop-shadow(0 16px 24px color-mix(in srgb, var(--color-accent-default) 16%, transparent));
-    animation: intro-item-enter 210ms var(--motion-easing-emphasized) 40ms both;
-  }
-
-  .intro-avatar {
-    border-radius: 18px;
-    transform: rotate(-2deg);
-  }
-
-  .intro-sparkle {
-    position: absolute;
-    right: -9px;
-    bottom: -6px;
-    width: 28px;
-    height: 28px;
-    border: 1px solid color-mix(in srgb, var(--color-accent-default) 20%, white);
-    border-radius: 999px;
-    color: var(--color-accent-strong);
-    background: var(--color-surface-raised);
-    box-shadow: 0 8px 18px rgba(var(--shadow-color-rgb), 0.1);
-    animation: sparkle-pop 240ms var(--motion-easing-emphasized) 100ms both;
   }
 
   .intro-eyebrow {
@@ -1264,16 +1591,131 @@
   }
 
   .skin-option {
+    --skin-option-accent: var(--color-accent-default);
+    --skin-option-strong: var(--color-accent-strong);
+    --skin-option-soft: var(--color-accent-soft);
     border: 1px solid var(--color-border-default);
     border-radius: 18px;
     color: var(--color-text-primary);
-    background: var(--color-surface-soft);
+    background: linear-gradient(145deg, var(--color-surface-raised), var(--color-surface-soft));
     transition:
       border-color var(--motion-duration-fast) var(--motion-easing-standard),
       background-color var(--motion-duration-fast) var(--motion-easing-standard),
       box-shadow var(--motion-duration-fast) var(--motion-easing-standard),
       transform var(--motion-duration-fast) var(--motion-easing-emphasized);
     animation: skin-card-enter 180ms var(--motion-easing-emphasized) both;
+  }
+
+  .skin-option-auto {
+    background: linear-gradient(135deg, var(--color-surface-raised), color-mix(in srgb, var(--color-accent-soft) 40%, var(--color-surface-soft)));
+  }
+
+  .skin-option-season::after {
+    position: absolute;
+    right: -2.2rem;
+    bottom: -3rem;
+    width: 8.5rem;
+    height: 8.5rem;
+    border-radius: 999px;
+    background: var(--skin-option-soft);
+    content: "";
+    opacity: 0.64;
+  }
+
+  .skin-option[data-skin-option="spring"] {
+    --skin-option-accent: #e56f88;
+    --skin-option-strong: #c8526e;
+    --skin-option-soft: #f8e2e8;
+  }
+
+  .skin-option[data-skin-option="summer"] {
+    --skin-option-accent: #2e9fc6;
+    --skin-option-strong: #187da3;
+    --skin-option-soft: #d9f0f6;
+  }
+
+  .skin-option[data-skin-option="autumn"] {
+    --skin-option-accent: #c96a38;
+    --skin-option-strong: #a54e26;
+    --skin-option-soft: #f4dfcf;
+  }
+
+  .skin-option[data-skin-option="winter"] {
+    --skin-option-accent: #6077c8;
+    --skin-option-strong: #445bab;
+    --skin-option-soft: #e0e7f8;
+  }
+
+  .skin-character-preview {
+    position: absolute;
+    z-index: 1;
+    right: -0.3rem;
+    bottom: -0.4rem;
+    width: 5.4rem;
+    height: 6.7rem;
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: contain;
+    filter: drop-shadow(0 8px 9px color-mix(in srgb, var(--skin-option-accent) 20%, transparent));
+    transition: transform var(--motion-duration-base) var(--motion-easing-emphasized);
+  }
+
+  .skin-option[data-skin-option="spring"] .skin-character-preview {
+    background-image: url("../assets/seasons/spring-character.png");
+  }
+
+  .skin-option[data-skin-option="summer"] .skin-character-preview {
+    background-image: url("../assets/seasons/summer-character.png");
+  }
+
+  .skin-option[data-skin-option="autumn"] .skin-character-preview {
+    background-image: url("../assets/seasons/autumn-character.png");
+  }
+
+  .skin-option[data-skin-option="winter"] .skin-character-preview {
+    background-image: url("../assets/seasons/winter-character.png");
+  }
+
+  .skin-auto-character-list {
+    position: absolute;
+    right: 1rem;
+    bottom: 0.25rem;
+    display: flex;
+    align-items: flex-end;
+    width: 7.4rem;
+    height: 4.8rem;
+  }
+
+  .skin-auto-character {
+    position: relative;
+    width: 2.6rem;
+    height: 3.8rem;
+    margin-left: -0.7rem;
+    border-radius: 999px 999px 0 0;
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: contain;
+    filter: drop-shadow(0 4px 5px rgba(var(--shadow-color-rgb), 0.1));
+  }
+
+  .skin-auto-character:first-child {
+    margin-left: 0;
+  }
+
+  .skin-auto-character-spring {
+    background-image: url("../assets/seasons/spring-character.png");
+  }
+
+  .skin-auto-character-summer {
+    background-image: url("../assets/seasons/summer-character.png");
+  }
+
+  .skin-auto-character-autumn {
+    background-image: url("../assets/seasons/autumn-character.png");
+  }
+
+  .skin-auto-character-winter {
+    background-image: url("../assets/seasons/winter-character.png");
   }
 
   .skin-option-delay-0 {
@@ -1294,19 +1736,19 @@
 
 
   .skin-option.is-active {
-    border-color: color-mix(in srgb, var(--color-accent-default) 44%, var(--color-border-default));
-    background: color-mix(in srgb, var(--color-accent-soft) 52%, var(--color-surface-raised));
-    box-shadow: 0 8px 22px color-mix(in srgb, var(--color-accent-default) 9%, transparent);
+    border-color: color-mix(in srgb, var(--skin-option-accent) 48%, var(--color-border-default));
+    background: linear-gradient(145deg, color-mix(in srgb, var(--skin-option-soft) 68%, white), var(--color-surface-raised));
+    box-shadow: 0 10px 26px color-mix(in srgb, var(--skin-option-accent) 13%, transparent);
   }
 
   .skin-icon {
-    color: var(--color-accent-strong);
-    background: var(--color-accent-soft);
+    color: var(--skin-option-strong);
+    background: var(--skin-option-soft);
   }
 
   .skin-check {
     color: var(--color-accent-foreground);
-    background: var(--color-accent-default);
+    background: var(--skin-option-accent);
     opacity: 0;
     transform: scale(0.75);
     transition:
@@ -1353,51 +1795,51 @@
   }
 
   .skin-swatch-spring-0 {
-    background: #fbf8fa;
+    background: #fff8fa;
   }
 
   .skin-swatch-spring-1 {
-    background: #e45d8c;
+    background: #e56f88;
   }
 
   .skin-swatch-spring-2 {
-    background: #f2d9e2;
+    background: #f4dce4;
   }
 
   .skin-swatch-summer-0 {
-    background: #f7fafb;
+    background: #f4fbfd;
   }
 
   .skin-swatch-summer-1 {
-    background: #2a8db4;
+    background: #2e9fc6;
   }
 
   .skin-swatch-summer-2 {
-    background: #d6edf4;
+    background: #d4f0f5;
   }
 
   .skin-swatch-autumn-0 {
-    background: #faf8f5;
+    background: #fff9f2;
   }
 
   .skin-swatch-autumn-1 {
-    background: #c56c3d;
+    background: #c96a38;
   }
 
   .skin-swatch-autumn-2 {
-    background: #efdfd1;
+    background: #eedac7;
   }
 
   .skin-swatch-winter-0 {
-    background: #f7f8fb;
+    background: #f6f9ff;
   }
 
   .skin-swatch-winter-1 {
-    background: #6674d2;
+    background: #6077c8;
   }
 
   .skin-swatch-winter-2 {
-    background: #dfe3f7;
+    background: #dce5f8;
   }
 
   .skin-period {
@@ -1639,6 +2081,63 @@
     }
   }
 
+  @media (max-width: 640px) {
+    .message-area .seasonal-scene-pattern {
+      background-size: 34rem auto;
+      opacity: 0.52;
+    }
+
+    .message-area .seasonal-particle-2,
+    .message-area .seasonal-particle-5,
+    .message-area .seasonal-particle-7 {
+      display: none;
+    }
+
+    .conversation-intro .season-hero-card {
+      border-radius: 24px;
+      padding-bottom: 0.9rem;
+    }
+
+    .conversation-intro .season-hero-card::before {
+      background-size: 22rem auto;
+      opacity: 0.4;
+    }
+
+    .conversation-intro .season-hero-card::after {
+      right: 50%;
+      bottom: -10rem;
+      transform: translateX(50%);
+    }
+
+    .conversation-intro .seasonal-character {
+      width: 174px;
+      height: 162px;
+    }
+
+    .conversation-intro .seasonal-character-image {
+      background-position: center calc(100% + 0.2rem);
+    }
+
+    .skin-option-season .skin-character-preview {
+      right: -0.45rem;
+      width: 5rem;
+    }
+  }
+
+  [data-page-visibility="hidden"] :where(
+      .app-backdrop::before,
+      .status-dot.is-checking,
+      .seasonal-scene-gradient,
+      .seasonal-particle,
+      .seasonal-character-image,
+      .message-bubble.is-streaming::after,
+      .typing-dot,
+      .streaming-cursor,
+      .is-spinning
+    ) {
+    animation-play-state: paused;
+  }
+
   [data-motion-preference="reduced"] :where(
       .app-backdrop::before,
       .chat-shell,
@@ -1734,6 +2233,94 @@
       ) {
       animation: none;
       transition-duration: 0.01ms;
+    }
+  }
+
+  [data-motion-preference="reduced"] :where(
+      .seasonal-scene,
+      .seasonal-scene-gradient,
+      .seasonal-particle,
+      .season-hero-card,
+      .season-hero-copy,
+      .seasonal-character,
+      .seasonal-character-image,
+      .skin-character-preview
+    ) {
+    animation: none;
+    transition-duration: 0.01ms;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(
+        .seasonal-scene,
+        .seasonal-scene-gradient,
+        .seasonal-particle,
+        .season-hero-card,
+        .season-hero-copy,
+        .seasonal-character,
+        .seasonal-character-image,
+        .skin-character-preview
+      ) {
+      animation: none;
+      transition-duration: 0.01ms;
+    }
+  }
+
+  @keyframes season-scene-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes season-scene-breathe {
+    from {
+      transform: translate3d(0, 0, 0) scale(0.96);
+      opacity: 0.4;
+    }
+    to {
+      transform: translate3d(-1.5rem, 1rem, 0) scale(1.05);
+      opacity: 0.66;
+    }
+  }
+
+  @keyframes season-particle-drift {
+    0% {
+      transform: translate3d(0, -1.5rem, 0) rotate(0deg) scale(0.88);
+      opacity: 0;
+    }
+    16% {
+      opacity: var(--season-particle-opacity);
+    }
+    84% {
+      opacity: var(--season-particle-opacity-muted);
+    }
+    100% {
+      transform: translate3d(2.4rem, 8rem, 0) rotate(170deg) scale(1.08);
+      opacity: 0;
+    }
+  }
+
+  @keyframes season-character-enter {
+    from {
+      transform: translate3d(18px, 10px, 0) scale(0.94);
+      opacity: 0;
+    }
+    to {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes season-character-float {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate(-0.6deg);
+    }
+    50% {
+      transform: translate3d(0, -7px, 0) rotate(0.8deg);
     }
   }
 

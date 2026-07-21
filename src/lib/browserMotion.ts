@@ -15,6 +15,32 @@ function getMotionPreferenceQuery(): MediaQueryList | null {
   return window.matchMedia(REDUCED_MOTION_MEDIA_QUERY);
 }
 
+function hasCompleteAnimationFrameApi(): boolean {
+  return (
+    typeof window.requestAnimationFrame === 'function' &&
+    typeof window.cancelAnimationFrame === 'function'
+  );
+}
+
+function applyDocumentMotionPreference(isReducedMotion: boolean): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.documentElement.dataset.motionPreference = isReducedMotion
+    ? 'reduced'
+    : 'full';
+}
+
+function applyDocumentVisibilityState(): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  document.documentElement.dataset.pageVisibility =
+    document.visibilityState === 'hidden' ? 'hidden' : 'visible';
+}
+
 export function isReducedMotionPreferred(): boolean {
   return getMotionPreferenceQuery()?.matches ?? false;
 }
@@ -31,7 +57,10 @@ export function subscribeToMotionPreference(
     onPreferenceChange(motionPreferenceEvent.matches);
   };
 
-  if (typeof motionPreferenceQuery.addEventListener === 'function') {
+  if (
+    typeof motionPreferenceQuery.addEventListener === 'function' &&
+    typeof motionPreferenceQuery.removeEventListener === 'function'
+  ) {
     motionPreferenceQuery.addEventListener('change', handleMotionPreferenceChange);
     return () => {
       motionPreferenceQuery.removeEventListener('change', handleMotionPreferenceChange);
@@ -46,8 +75,28 @@ export function subscribeToMotionPreference(
   };
 }
 
+export function bindDocumentMotionState(): () => void {
+  if (typeof document === 'undefined') {
+    return () => undefined;
+  }
+
+  applyDocumentMotionPreference(isReducedMotionPreferred());
+  applyDocumentVisibilityState();
+
+  const unsubscribeMotionPreference = subscribeToMotionPreference(
+    applyDocumentMotionPreference,
+  );
+  const handleVisibilityChange = () => applyDocumentVisibilityState();
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => {
+    unsubscribeMotionPreference();
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}
+
 export function requestVisualFrame(frameCallback: () => void): number {
-  if (typeof window.requestAnimationFrame === 'function') {
+  if (hasCompleteAnimationFrameApi()) {
     return window.requestAnimationFrame(frameCallback);
   }
 
@@ -55,7 +104,7 @@ export function requestVisualFrame(frameCallback: () => void): number {
 }
 
 export function cancelVisualFrame(frameId: number): void {
-  if (typeof window.cancelAnimationFrame === 'function') {
+  if (hasCompleteAnimationFrameApi()) {
     window.cancelAnimationFrame(frameId);
     return;
   }

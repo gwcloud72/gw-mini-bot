@@ -7,10 +7,13 @@ import {
   requestVisualFrame,
 } from '@/lib/browserMotion';
 import type { ChatMessage } from '@/types/chat';
+import type { ChatSkinId } from '@/types/skin';
 import { ConversationIntro } from './ConversationIntro';
 import { MessageBubble } from './MessageBubble';
+import { SeasonalScene } from './SeasonalScene';
 
 interface MessageListProps {
+  activeSkinId: ChatSkinId;
   chatMessages: ChatMessage[];
   isStreaming: boolean;
   onQuickPromptSelect: (promptText: string) => void;
@@ -33,6 +36,7 @@ function scrollViewportTo(
 }
 
 export function MessageList({
+  activeSkinId,
   chatMessages,
   isStreaming,
   onQuickPromptSelect,
@@ -66,6 +70,7 @@ export function MessageList({
 
   const schedulePinnedScroll = useCallback(() => {
     if (
+      !hasConversationMessages ||
       scheduledScrollFrameRef.current !== null ||
       !isViewportPinnedRef.current
     ) {
@@ -76,7 +81,7 @@ export function MessageList({
       scheduledScrollFrameRef.current = null;
       scrollToLatestImmediately();
     });
-  }, [scrollToLatestImmediately]);
+  }, [hasConversationMessages, scrollToLatestImmediately]);
 
   const scrollToLatestMessage = useCallback(() => {
     const messageViewport = messageViewportRef.current;
@@ -103,10 +108,18 @@ export function MessageList({
   }, [chatMessages.length, schedulePinnedScroll]);
 
   useEffect(() => {
-    if (isStreaming || latestMessageContentLength > 0) {
+    if (
+      hasConversationMessages &&
+      (isStreaming || latestMessageContentLength > 0)
+    ) {
       schedulePinnedScroll();
     }
-  }, [isStreaming, latestMessageContentLength, schedulePinnedScroll]);
+  }, [
+    hasConversationMessages,
+    isStreaming,
+    latestMessageContentLength,
+    schedulePinnedScroll,
+  ]);
 
   useEffect(() => {
     const messageStage = messageStageRef.current;
@@ -148,11 +161,12 @@ export function MessageList({
   };
 
   return (
-    <div className="relative min-h-0 flex-1">
+    <div className="message-area relative min-h-0 flex-1 overflow-hidden">
+      <SeasonalScene key={activeSkinId} skinId={activeSkinId} />
       <div
         ref={messageViewportRef}
         onScroll={handleViewportScroll}
-        className="chat-wallpaper h-full overflow-y-auto overscroll-contain px-4 py-4 sm:px-7 sm:py-6"
+        className="chat-wallpaper relative z-[1] h-full overflow-y-auto overscroll-contain px-4 py-4 sm:px-7 sm:py-6"
         role="log"
         aria-live="polite"
         aria-relevant="additions text"
@@ -166,6 +180,7 @@ export function MessageList({
         >
           {!hasConversationMessages ? (
             <ConversationIntro
+              activeSkinId={activeSkinId}
               isDisabled={isStreaming}
               onPromptSelect={onQuickPromptSelect}
             />

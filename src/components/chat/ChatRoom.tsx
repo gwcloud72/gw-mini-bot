@@ -24,7 +24,12 @@ export function ChatRoom() {
     refreshConnectionStatus,
     dismissErrorMessage,
   } = useChatSession();
-  const { activeSkinId, setActiveSkinId } = useChatSkin();
+  const {
+    activeSkinId,
+    isAutomaticSkin,
+    setActiveSkinId,
+    setAutomaticSkin,
+  } = useChatSkin();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleOpenMenu = useCallback(() => {
@@ -66,6 +71,7 @@ export function ChatRoom() {
         />
 
         <MessageList
+          activeSkinId={activeSkinId}
           chatMessages={chatMessages}
           isStreaming={isStreaming}
           onQuickPromptSelect={sendChatMessage}
@@ -85,6 +91,8 @@ export function ChatRoom() {
           isOpen={isMenuOpen}
           connectionStatus={connectionStatus}
           activeSkinId={activeSkinId}
+          isAutomaticSkin={isAutomaticSkin}
+          onAutomaticSkinSelect={setAutomaticSkin}
           onSkinSelect={setActiveSkinId}
           onCloseMenu={handleCloseMenu}
           onStartNewConversation={resetConversation}

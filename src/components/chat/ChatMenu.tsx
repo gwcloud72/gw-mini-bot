@@ -14,6 +14,8 @@ interface ChatMenuProps {
   isOpen: boolean;
   connectionStatus: ChatConnectionState;
   activeSkinId: ChatSkinId;
+  isAutomaticSkin: boolean;
+  onAutomaticSkinSelect: () => void;
   onSkinSelect: (skinId: ChatSkinId) => void;
   onCloseMenu: () => void;
   onStartNewConversation: () => void;
@@ -33,6 +35,8 @@ export const ChatMenu = memo(function ChatMenu({
   isOpen,
   connectionStatus,
   activeSkinId,
+  isAutomaticSkin,
+  onAutomaticSkinSelect,
   onSkinSelect,
   onCloseMenu,
   onStartNewConversation,
@@ -148,7 +152,12 @@ export const ChatMenu = memo(function ChatMenu({
         </div>
 
         <div className="max-h-[calc(88dvh-120px)] overflow-y-auto px-3 pb-3 sm:max-h-[min(690px,calc(100dvh-110px))] sm:px-3.5">
-          <SkinPicker selectedSkinId={activeSkinId} onSkinSelect={onSkinSelect} />
+          <SkinPicker
+            selectedSkinId={activeSkinId}
+            isAutomaticSkin={isAutomaticSkin}
+            onAutomaticSkinSelect={onAutomaticSkinSelect}
+            onSkinSelect={onSkinSelect}
+          />
 
           <div className="menu-divider my-3" />
 

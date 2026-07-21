@@ -204,7 +204,6 @@ export function formatMessageTime(isoTimestamp: string): string {
 
 export function formatConversationDate(conversationDate = new Date()): string {
   return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
     month: 'long',
     day: 'numeric',
     weekday: 'short',
