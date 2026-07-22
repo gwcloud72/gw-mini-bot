@@ -40,6 +40,7 @@ export const QUICK_PROMPT_DEFINITIONS = [
 
 export const MAX_MESSAGE_INPUT_LENGTH = publicAppConfig.maxMessageLength;
 export const MAX_PERSISTED_MESSAGE_COUNT = publicAppConfig.maxPersistedMessages;
+export const MAX_RESPONSE_OUTPUT_LENGTH = publicAppConfig.maxResponseLength;
 export const MAX_CONTEXT_MESSAGE_COUNT = publicAppConfig.maxContextMessages;
 export const CHAT_HISTORY_STORAGE_KEY = 'minichat:conversation:v1';
 export const LEGACY_CHAT_HISTORY_STORAGE_KEYS = [

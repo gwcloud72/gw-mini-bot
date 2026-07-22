@@ -124,6 +124,28 @@ describe('streamChatResponse', () => {
     );
   });
 
+  it('normalizes a network failure into a retryable public error', async () => {
+    stubValidApiEnvironment();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      }),
+    );
+
+    await expect(
+      streamChatResponse({
+        requestMessages,
+        abortSignal: new AbortController().signal,
+        onTextChunk: () => undefined,
+      }),
+    ).rejects.toMatchObject({
+      errorCode: 'NETWORK_ERROR',
+      isRetryable: true,
+      message: '대화 서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해주세요.',
+    });
+  });
+
   it('rejects a stream that closes without a done event', async () => {
     stubValidApiEnvironment();
     vi.stubGlobal(
@@ -388,4 +410,74 @@ describe('checkChatApiHealth', () => {
 
     await expect(checkChatApiHealth()).resolves.toBe(false);
   });
+
+  it('rejects a recognized event with a non-object payload', async () => {
+    stubValidApiEnvironment();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          `${createReadyEvent()}event: chunk\ndata: null\n\n`,
+          { headers: createProtocolHeaders() },
+        ),
+      ),
+    );
+
+    await expect(
+      streamChatResponse({
+        requestMessages,
+        abortSignal: new AbortController().signal,
+        onTextChunk: () => undefined,
+      }),
+    ).rejects.toMatchObject({
+      errorCode: 'INVALID_SSE_DATA',
+      isRetryable: true,
+    });
+  });
+
+  it('rejects an unterminated SSE event before its buffer can grow without bounds', async () => {
+    stubValidApiEnvironment();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          `event: chunk\ndata: ${'가'.repeat(300_000)}`,
+          { headers: createProtocolHeaders() },
+        ),
+      ),
+    );
+
+    await expect(
+      streamChatResponse({
+        requestMessages,
+        abortSignal: new AbortController().signal,
+        onTextChunk: () => undefined,
+      }),
+    ).rejects.toMatchObject({
+      errorCode: 'INVALID_SSE_DATA',
+      isRetryable: true,
+    });
+  });
+
+  it('ignores an unknown extension event without parsing its payload', async () => {
+    stubValidApiEnvironment();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(
+          `${createReadyEvent()}event: extension\ndata: not-json\n\nevent: done\ndata: {}\n\n`,
+          { headers: createProtocolHeaders() },
+        ),
+      ),
+    );
+
+    await expect(
+      streamChatResponse({
+        requestMessages,
+        abortSignal: new AbortController().signal,
+        onTextChunk: () => undefined,
+      }),
+    ).resolves.toBeUndefined();
+  });
+
 });

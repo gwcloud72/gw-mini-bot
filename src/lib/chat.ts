@@ -4,6 +4,7 @@ import {
   MAX_CONTEXT_MESSAGE_COUNT,
   MAX_MESSAGE_INPUT_LENGTH,
   MAX_PERSISTED_MESSAGE_COUNT,
+  MAX_RESPONSE_OUTPUT_LENGTH,
   WELCOME_MESSAGE_TEXT,
 } from '@/constants/chat';
 import type { ChatMessage, ChatRequestMessage, ChatRole } from '@/types/chat';
@@ -29,7 +30,13 @@ export function createChatMessage(
   messageOptions: Partial<
     Pick<
       ChatMessage,
-      'status' | 'isWelcome' | 'errorCode' | 'statusMessage' | 'progressMessage' | 'messageKind'
+      | 'status'
+      | 'isWelcome'
+      | 'errorCode'
+      | 'isRetryable'
+      | 'statusMessage'
+      | 'progressMessage'
+      | 'messageKind'
     >
   > = {},
 ): ChatMessage {
@@ -41,6 +48,7 @@ export function createChatMessage(
     status: messageOptions.status ?? 'complete',
     isWelcome: messageOptions.isWelcome,
     errorCode: messageOptions.errorCode,
+    isRetryable: messageOptions.isRetryable,
     statusMessage: messageOptions.statusMessage,
     progressMessage: messageOptions.progressMessage,
     messageKind: messageOptions.messageKind ?? 'standard',
@@ -51,17 +59,46 @@ export function createWelcomeChatMessage(): ChatMessage {
   return createChatMessage('assistant', WELCOME_MESSAGE_TEXT, { isWelcome: true });
 }
 
+function collectContextMessages(chatMessages: ChatMessage[]): ChatMessage[] {
+  const contextMessages: ChatMessage[] = [];
+
+  for (const chatMessage of chatMessages) {
+    if (chatMessage.isWelcome || chatMessage.content.trim().length === 0) {
+      continue;
+    }
+
+    if (
+      chatMessage.role === 'assistant' &&
+      (chatMessage.status === 'error' ||
+        chatMessage.status === 'cancelled' ||
+        chatMessage.messageKind === 'daily-quota-notice')
+    ) {
+      if (contextMessages.at(-1)?.role === 'user') {
+        contextMessages.pop();
+      }
+      continue;
+    }
+
+    if (chatMessage.role === 'user') {
+      if (contextMessages.at(-1)?.role === 'user') {
+        contextMessages.pop();
+      }
+      contextMessages.push(chatMessage);
+      continue;
+    }
+
+    if (contextMessages.at(-1)?.role === 'user') {
+      contextMessages.push(chatMessage);
+    }
+  }
+
+  return contextMessages;
+}
+
 export function toChatRequestMessages(chatMessages: ChatMessage[]): ChatRequestMessage[] {
-  const eligibleMessages = chatMessages
-    .filter(
-      (chatMessage) =>
-        !chatMessage.isWelcome &&
-        chatMessage.content.trim().length > 0 &&
-        chatMessage.status !== 'error' &&
-        chatMessage.status !== 'cancelled' &&
-        chatMessage.messageKind !== 'daily-quota-notice',
-    )
-    .slice(-MAX_CONTEXT_MESSAGE_COUNT);
+  const eligibleMessages = collectContextMessages(chatMessages).slice(
+    -MAX_CONTEXT_MESSAGE_COUNT,
+  );
   const selectedMessages: ChatRequestMessage[] = [];
   let selectedCharacterCount = 0;
 
@@ -87,7 +124,12 @@ export function toChatRequestMessages(chatMessages: ChatMessage[]): ChatRequestM
     selectedCharacterCount = nextCharacterCount;
   }
 
-  return selectedMessages.reverse();
+  const normalizedRequestMessages = selectedMessages.reverse();
+  while (normalizedRequestMessages.at(0)?.role === 'assistant') {
+    normalizedRequestMessages.shift();
+  }
+
+  return normalizedRequestMessages;
 }
 
 function isPersistedChatMessage(candidateValue: unknown): candidateValue is ChatMessage {
@@ -103,6 +145,73 @@ function isPersistedChatMessage(candidateValue: unknown): candidateValue is Chat
     typeof candidateMessage.content === 'string' &&
     typeof candidateMessage.createdAt === 'string'
   );
+}
+
+function normalizeOptionalText(
+  candidateValue: unknown,
+  maximumLength: number,
+): string | undefined {
+  return typeof candidateValue === 'string'
+    ? candidateValue.slice(0, maximumLength)
+    : undefined;
+}
+
+function createUniquePersistedMessageId(
+  candidateId: string,
+  usedMessageIds: Set<string>,
+): string {
+  let normalizedId = candidateId.trim().slice(0, 160);
+
+  while (!normalizedId || usedMessageIds.has(normalizedId)) {
+    normalizedId = createChatMessageId();
+  }
+
+  usedMessageIds.add(normalizedId);
+  return normalizedId;
+}
+
+function normalizePersistedTimestamp(candidateTimestamp: string): string {
+  const parsedTimestamp = new Date(candidateTimestamp);
+  return Number.isNaN(parsedTimestamp.getTime())
+    ? new Date().toISOString()
+    : parsedTimestamp.toISOString();
+}
+
+function normalizePersistedChatMessage(
+  chatMessage: ChatMessage,
+  usedMessageIds: Set<string>,
+): ChatMessage {
+  const normalizedStatus =
+    chatMessage.role === 'user'
+      ? ('complete' as const)
+      : chatMessage.status === 'streaming'
+        ? ('cancelled' as const)
+        : chatMessage.status === 'complete' ||
+            chatMessage.status === 'error' ||
+            chatMessage.status === 'cancelled'
+          ? chatMessage.status
+          : ('complete' as const);
+  const maximumContentLength =
+    chatMessage.role === 'user'
+      ? MAX_MESSAGE_INPUT_LENGTH
+      : MAX_RESPONSE_OUTPUT_LENGTH;
+
+  return {
+    id: createUniquePersistedMessageId(chatMessage.id, usedMessageIds),
+    role: chatMessage.role,
+    content: chatMessage.content.slice(0, maximumContentLength),
+    createdAt: normalizePersistedTimestamp(chatMessage.createdAt),
+    status: normalizedStatus,
+    isWelcome: false,
+    errorCode: normalizeOptionalText(chatMessage.errorCode, 120),
+    isRetryable:
+      typeof chatMessage.isRetryable === 'boolean'
+        ? chatMessage.isRetryable
+        : undefined,
+    statusMessage: normalizeOptionalText(chatMessage.statusMessage, 600),
+    progressMessage: undefined,
+    messageKind: 'standard',
+  };
 }
 
 function readPersistedConversation(): PersistedConversationRecord | null {
@@ -134,28 +243,33 @@ export function loadPersistedChatMessages(): ChatMessage[] {
       return [];
     }
 
+    const usedMessageIds = new Set<string>();
     const restoredChatMessages = parsedMessages
       .filter(isPersistedChatMessage)
-      .filter((chatMessage) => !chatMessage.isWelcome && chatMessage.content.trim().length > 0)
+      .filter(
+        (chatMessage) =>
+          !chatMessage.isWelcome &&
+          chatMessage.messageKind !== 'daily-quota-notice' &&
+          chatMessage.content.trim().length > 0,
+      )
       .slice(-MAX_PERSISTED_MESSAGE_COUNT)
-      .map((chatMessage) => ({
-        ...chatMessage,
-        status:
-          chatMessage.status === 'streaming'
-            ? ('cancelled' as const)
-            : chatMessage.status === 'complete' ||
-                chatMessage.status === 'error' ||
-                chatMessage.status === 'cancelled'
-              ? chatMessage.status
-              : ('complete' as const),
-        isWelcome: false,
-      }));
-
-    if (persistedConversation.sourceStorageKey !== CHAT_HISTORY_STORAGE_KEY) {
-      window.localStorage.setItem(
-        CHAT_HISTORY_STORAGE_KEY,
-        JSON.stringify(restoredChatMessages),
+      .map((chatMessage) =>
+        normalizePersistedChatMessage(chatMessage, usedMessageIds),
       );
+
+    const normalizedConversation = JSON.stringify(restoredChatMessages);
+    if (
+      persistedConversation.sourceStorageKey !== CHAT_HISTORY_STORAGE_KEY ||
+      normalizedConversation !== persistedConversation.serializedMessages
+    ) {
+      try {
+        window.localStorage.setItem(
+          CHAT_HISTORY_STORAGE_KEY,
+          normalizedConversation,
+        );
+      } catch {
+        return restoredChatMessages;
+      }
     }
 
     return restoredChatMessages;
@@ -202,7 +316,24 @@ export function formatMessageTime(isoTimestamp: string): string {
   }).format(messageDate);
 }
 
+export function getConversationDateKey(isoTimestamp: string): string {
+  const messageDate = new Date(isoTimestamp);
+  if (Number.isNaN(messageDate.getTime())) {
+    return '';
+  }
+
+  return [
+    messageDate.getFullYear(),
+    String(messageDate.getMonth() + 1).padStart(2, '0'),
+    String(messageDate.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
 export function formatConversationDate(conversationDate = new Date()): string {
+  if (Number.isNaN(conversationDate.getTime())) {
+    return '';
+  }
+
   return new Intl.DateTimeFormat('ko-KR', {
     month: 'long',
     day: 'numeric',

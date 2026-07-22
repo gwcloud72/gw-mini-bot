@@ -4,6 +4,21 @@ export interface ParsedSseEvent {
   id?: string;
 }
 
+interface SseParserOptions {
+  maxBufferedCharacterCount?: number;
+}
+
+const DEFAULT_MAX_BUFFERED_CHARACTER_COUNT = 256 * 1_024;
+
+export class SseParserError extends Error {
+  readonly errorCode = 'SSE_BUFFER_LIMIT_EXCEEDED';
+
+  constructor() {
+    super('SSE event buffer exceeded the allowed size.');
+    this.name = 'SseParserError';
+  }
+}
+
 function parseSseEventBlock(eventBlock: string): ParsedSseEvent | null {
   let eventName = 'message';
   let eventId: string | undefined;
@@ -60,6 +75,17 @@ function parseSseEventBlock(eventBlock: string): ParsedSseEvent | null {
 
 export class SseParser {
   private eventBuffer = '';
+  private readonly maxBufferedCharacterCount: number;
+
+  constructor(parserOptions: SseParserOptions = {}) {
+    const configuredBufferLimit = parserOptions.maxBufferedCharacterCount;
+    this.maxBufferedCharacterCount =
+      typeof configuredBufferLimit === 'number' &&
+      Number.isSafeInteger(configuredBufferLimit) &&
+      configuredBufferLimit > 0
+        ? configuredBufferLimit
+        : DEFAULT_MAX_BUFFERED_CHARACTER_COUNT;
+  }
 
   feed(textChunk: string): ParsedSseEvent[] {
     this.eventBuffer += textChunk;
@@ -77,11 +103,20 @@ export class SseParser {
       this.eventBuffer = this.eventBuffer.slice(
         eventBoundary.index + eventBoundary[0].length,
       );
+      if (eventBlock.length > this.maxBufferedCharacterCount) {
+        this.eventBuffer = '';
+        throw new SseParserError();
+      }
       const parsedEvent = parseSseEventBlock(eventBlock);
 
       if (parsedEvent) {
         parsedEvents.push(parsedEvent);
       }
+    }
+
+    if (this.eventBuffer.length > this.maxBufferedCharacterCount) {
+      this.eventBuffer = '';
+      throw new SseParserError();
     }
 
     return parsedEvents;
@@ -93,6 +128,10 @@ export class SseParser {
 
     if (!remainingEventBlock) {
       return [];
+    }
+
+    if (remainingEventBlock.length > this.maxBufferedCharacterCount) {
+      throw new SseParserError();
     }
 
     const parsedEvent = parseSseEventBlock(remainingEventBlock);

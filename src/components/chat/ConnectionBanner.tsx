@@ -1,38 +1,30 @@
-import { AlertCircle, RefreshCw, ServerOff, X } from 'lucide-react';
+import { AlertCircle, RefreshCw, ServerOff } from 'lucide-react';
 import { memo } from 'react';
 import type { ChatConnectionState } from '@/types/chat';
 
 interface ConnectionBannerProps {
   connectionStatus: ChatConnectionState;
-  errorMessage: string | null;
   onRetryConnection: () => void;
-  onDismissError: () => void;
 }
 
 export const ConnectionBanner = memo(function ConnectionBanner({
   connectionStatus,
-  errorMessage,
   onRetryConnection,
-  onDismissError,
 }: ConnectionBannerProps) {
   const isUnconfigured = connectionStatus === 'unconfigured';
-  const shouldShowBanner =
-    Boolean(errorMessage) || connectionStatus === 'offline' || isUnconfigured;
-
-  if (!shouldShowBanner) {
+  const isOffline = connectionStatus === 'offline';
+  if (!isUnconfigured && !isOffline) {
     return null;
   }
 
-  const bannerMessage =
-    errorMessage ??
-    (isUnconfigured
-      ? '대화 서버 주소를 연결하면 바로 시작할 수 있어요.'
-      : '대화 서버와 잠시 연결되지 않았어요.');
+  const bannerMessage = isUnconfigured
+    ? '대화 서버 주소를 연결하면 바로 시작할 수 있어요.'
+    : '대화 서버와 잠시 연결되지 않았어요.';
 
   return (
     <div
       className="connection-banner mx-3 mt-3 rounded-[18px] px-3.5 py-3 sm:mx-5 sm:px-4"
-      role={errorMessage ? 'alert' : 'status'}
+      role="status"
       data-variant={isUnconfigured ? 'setup' : 'error'}
     >
       <div className="connection-banner-content mx-auto flex max-w-[790px] items-center gap-2.5">
@@ -44,7 +36,7 @@ export const ConnectionBanner = memo(function ConnectionBanner({
           )}
         </span>
         <p className="min-w-0 flex-1">{bannerMessage}</p>
-        {!isUnconfigured && (
+        {isOffline ? (
           <button
             type="button"
             onClick={onRetryConnection}
@@ -53,17 +45,7 @@ export const ConnectionBanner = memo(function ConnectionBanner({
             <RefreshCw className="size-3" aria-hidden="true" />
             재연결
           </button>
-        )}
-        {errorMessage && (
-          <button
-            type="button"
-            onClick={onDismissError}
-            className="banner-close inline-flex size-8 shrink-0 items-center justify-center rounded-full"
-            aria-label="알림 닫기"
-          >
-            <X className="size-3.5" aria-hidden="true" />
-          </button>
-        )}
+        ) : null}
       </div>
     </div>
   );

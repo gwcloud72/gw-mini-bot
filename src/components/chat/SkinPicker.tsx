@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react';
 import {
   Check,
   Flower2,
@@ -14,6 +15,7 @@ import {
   getChatSkinPeriodLabel,
   getSeasonalChatSkinId,
 } from '@/constants/skins';
+import { preloadSeasonalSkinAssets } from '@/lib/seasonalAssets';
 import type { ChatSkinId } from '@/types/skin';
 
 interface SkinPickerProps {
@@ -29,6 +31,48 @@ const SKIN_ICONS: Readonly<Record<ChatSkinId, LucideIcon>> = {
   autumn: Leaf,
   winter: Snowflake,
 };
+
+function handleSkinRadioKeyDown(
+  keyboardEvent: KeyboardEvent<HTMLButtonElement>,
+): void {
+  if (
+    ![
+      'ArrowLeft',
+      'ArrowRight',
+      'ArrowUp',
+      'ArrowDown',
+      'Home',
+      'End',
+    ].includes(keyboardEvent.key)
+  ) {
+    return;
+  }
+
+  const radioGroup = keyboardEvent.currentTarget.closest('[role="radiogroup"]');
+  const radioButtons = Array.from(
+    radioGroup?.querySelectorAll<HTMLButtonElement>(
+      'button[role="radio"]:not(:disabled)',
+    ) ?? [],
+  );
+  const currentIndex = radioButtons.indexOf(keyboardEvent.currentTarget);
+  if (currentIndex < 0 || radioButtons.length === 0) {
+    return;
+  }
+
+  keyboardEvent.preventDefault();
+  const lastIndex = radioButtons.length - 1;
+  const nextIndex =
+    keyboardEvent.key === 'Home'
+      ? 0
+      : keyboardEvent.key === 'End'
+        ? lastIndex
+        : keyboardEvent.key === 'ArrowLeft' || keyboardEvent.key === 'ArrowUp'
+          ? (currentIndex - 1 + radioButtons.length) % radioButtons.length
+          : (currentIndex + 1) % radioButtons.length;
+  const nextRadioButton = radioButtons[nextIndex];
+  nextRadioButton?.focus();
+  nextRadioButton?.click();
+}
 
 export function SkinPicker({
   selectedSkinId,
@@ -64,7 +108,11 @@ export function SkinPicker({
           type="button"
           role="radio"
           aria-checked={isAutomaticSkin}
+          tabIndex={isAutomaticSkin ? 0 : -1}
+          onKeyDown={handleSkinRadioKeyDown}
           onClick={onAutomaticSkinSelect}
+          onFocus={() => preloadSeasonalSkinAssets(currentSeasonSkinId)}
+          onPointerEnter={() => preloadSeasonalSkinAssets(currentSeasonSkinId)}
           className={`skin-option skin-option-auto col-span-2 min-h-[104px] overflow-hidden p-3.5 text-left ${
             isAutomaticSkin ? 'is-active' : ''
           }`}
@@ -125,7 +173,13 @@ export function SkinPicker({
               type="button"
               role="radio"
               aria-checked={isSelected}
+              tabIndex={isSelected ? 0 : -1}
+              onKeyDown={handleSkinRadioKeyDown}
               onClick={() => onSkinSelect(skinDefinition.id)}
+              onFocus={() => preloadSeasonalSkinAssets(skinDefinition.id)}
+              onPointerEnter={() =>
+                preloadSeasonalSkinAssets(skinDefinition.id)
+              }
               data-skin-option={skinDefinition.id}
               className={`skin-option skin-option-season skin-option-delay-${skinIndex} relative min-h-[132px] overflow-hidden p-3.5 pr-[4.6rem] text-left ${
                 isSelected ? 'is-active' : ''

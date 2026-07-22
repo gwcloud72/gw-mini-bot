@@ -14,6 +14,7 @@ export interface ChatMessage {
   status: ChatMessageStatus;
   isWelcome?: boolean;
   errorCode?: string;
+  isRetryable?: boolean;
   statusMessage?: string;
   progressMessage?: string;
   messageKind?: ChatMessageKind;

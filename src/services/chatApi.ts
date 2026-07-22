@@ -5,7 +5,7 @@ import {
   MINICHAT_STREAM_PROTOCOL_HEADER,
   MINICHAT_STREAM_PROTOCOL_VERSION,
 } from '../../shared/protocol';
-import { SseParser, type ParsedSseEvent } from '@/lib/sse';
+import { SseParser, SseParserError, type ParsedSseEvent } from '@/lib/sse';
 import type {
   ChatQuotaStatus,
   ChatRequestMessage,
@@ -31,22 +31,14 @@ interface ChatApiErrorPayload {
   };
 }
 
-interface ChatStreamReadyPayload {
-  protocolVersion?: string;
-}
-
-interface ChatStreamChunkPayload {
-  text?: string;
-}
-
-interface ChatStreamStatusPayload {
-  phase?: string;
-}
-
 interface ChatHealthPayload {
   ok?: boolean;
   protocolVersion?: string;
 }
+
+const KNOWN_CHAT_STREAM_EVENTS = new Set<string>(
+  Object.values(MINICHAT_STREAM_EVENT),
+);
 
 interface ChatApiErrorOptions {
   errorCode?: string;
@@ -231,31 +223,51 @@ interface InternalChatStreamCallbacks
   onReady: () => void;
 }
 
+function isPlainRecord(candidateValue: unknown): candidateValue is Record<string, unknown> {
+  return (
+    candidateValue !== null &&
+    typeof candidateValue === 'object' &&
+    !Array.isArray(candidateValue)
+  );
+}
+
+function createInvalidSseDataError(): ChatApiError {
+  return new ChatApiError('스트리밍 응답 형식을 읽지 못했습니다.', {
+    errorCode: 'INVALID_SSE_DATA',
+    isRetryable: true,
+  });
+}
+
+function parseSseEventPayload(parsedSseEvent: ParsedSseEvent): unknown {
+  if (!parsedSseEvent.data) {
+    throw createInvalidSseDataError();
+  }
+
+  try {
+    return JSON.parse(parsedSseEvent.data) as unknown;
+  } catch {
+    throw createInvalidSseDataError();
+  }
+}
+
 function handleChatStreamEvent(
   parsedSseEvent: ParsedSseEvent,
   streamCallbacks: InternalChatStreamCallbacks,
 ): void {
-  if (!parsedSseEvent.data) {
+  if (!KNOWN_CHAT_STREAM_EVENTS.has(parsedSseEvent.event)) {
     return;
   }
 
-  let parsedEventPayload: unknown;
-
-  try {
-    parsedEventPayload = JSON.parse(parsedSseEvent.data);
-  } catch {
-    throw new ChatApiError('스트리밍 응답 형식을 읽지 못했습니다.', {
-      errorCode: 'INVALID_SSE_DATA',
-      isRetryable: true,
-    });
-  }
+  const parsedEventPayload = parseSseEventPayload(parsedSseEvent);
 
   switch (parsedSseEvent.event) {
     case MINICHAT_STREAM_EVENT.ready: {
-      const readyPayload = parsedEventPayload as ChatStreamReadyPayload;
-      if (
-        readyPayload.protocolVersion !== MINICHAT_STREAM_PROTOCOL_VERSION
-      ) {
+      if (!isPlainRecord(parsedEventPayload)) {
+        throw createInvalidSseDataError();
+      }
+
+      const protocolVersion = parsedEventPayload.protocolVersion;
+      if (protocolVersion !== MINICHAT_STREAM_PROTOCOL_VERSION) {
         throw new ChatApiError(
           '대화 화면과 서버 버전이 맞지 않습니다. 페이지를 새로고침해주세요.',
           {
@@ -269,33 +281,68 @@ function handleChatStreamEvent(
       break;
     }
     case MINICHAT_STREAM_EVENT.status: {
-      const streamStatus = parsedEventPayload as ChatStreamStatusPayload;
-      if (
-        streamStatus.phase === MINICHAT_STREAM_PHASE.generating
-      ) {
+      if (!isPlainRecord(parsedEventPayload)) {
+        throw createInvalidSseDataError();
+      }
+
+      const streamPhase = parsedEventPayload.phase;
+      if (streamPhase !== undefined && typeof streamPhase !== 'string') {
+        throw createInvalidSseDataError();
+      }
+      if (streamPhase === MINICHAT_STREAM_PHASE.generating) {
         streamCallbacks.onProgress?.('generating');
       }
       break;
     }
     case MINICHAT_STREAM_EVENT.chunk: {
-      const textChunk = (parsedEventPayload as ChatStreamChunkPayload).text;
-      if (typeof textChunk === 'string' && textChunk.length > 0) {
+      if (!isPlainRecord(parsedEventPayload)) {
+        throw createInvalidSseDataError();
+      }
+
+      const textChunk = parsedEventPayload.text;
+      if (typeof textChunk !== 'string') {
+        throw createInvalidSseDataError();
+      }
+      if (textChunk.length > 0) {
         streamCallbacks.onTextChunk(textChunk);
       }
       break;
     }
-    case MINICHAT_STREAM_EVENT.done:
+    case MINICHAT_STREAM_EVENT.done: {
+      if (!isPlainRecord(parsedEventPayload)) {
+        throw createInvalidSseDataError();
+      }
       streamCallbacks.onComplete?.(
         parsedEventPayload as ChatStreamCompletionMetadata,
       );
       break;
+    }
     case MINICHAT_STREAM_EVENT.error: {
-      const errorPayload = parsedEventPayload as ChatApiErrorPayload;
+      if (!isPlainRecord(parsedEventPayload)) {
+        throw createInvalidSseDataError();
+      }
+
+      const errorDetails = parsedEventPayload.error;
+      if (!isPlainRecord(errorDetails)) {
+        throw createInvalidSseDataError();
+      }
+
+      const errorMessage = errorDetails.message;
+      const errorCode = errorDetails.code;
+      const isRetryable = errorDetails.retryable;
+      if (
+        (errorMessage !== undefined && typeof errorMessage !== 'string') ||
+        (errorCode !== undefined && typeof errorCode !== 'string') ||
+        (isRetryable !== undefined && typeof isRetryable !== 'boolean')
+      ) {
+        throw createInvalidSseDataError();
+      }
+
       throw new ChatApiError(
-        errorPayload.error?.message ?? '답변 생성 중 문제가 생겼습니다.',
+        errorMessage ?? '답변 생성 중 문제가 생겼습니다.',
         {
-          errorCode: errorPayload.error?.code,
-          isRetryable: errorPayload.error?.retryable,
+          errorCode,
+          isRetryable,
         },
       );
     }
@@ -529,7 +576,25 @@ export async function streamChatResponse(
       });
     }
 
-    throw requestError;
+    if (requestError instanceof SseParserError) {
+      throw new ChatApiError('스트리밍 응답이 허용된 크기를 초과했습니다.', {
+        errorCode: 'INVALID_SSE_DATA',
+        isRetryable: true,
+      });
+    }
+
+    if (
+      requestError instanceof ChatApiError ||
+      inactivityAbortController.signal.aborted ||
+      streamOptions.abortSignal.aborted
+    ) {
+      throw requestError;
+    }
+
+    throw new ChatApiError('대화 서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해주세요.', {
+      errorCode: 'NETWORK_ERROR',
+      isRetryable: true,
+    });
   } finally {
     inactivityAbortController.cleanup();
   }

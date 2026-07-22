@@ -22,7 +22,6 @@ import type {
   ChatStreamProgress,
 } from '@/types/chat';
 
-
 const STREAM_DELAY_NOTICE_MS = 8_000;
 
 const STREAM_PROGRESS_MESSAGES: Record<ChatStreamProgress, string> = {
@@ -34,7 +33,6 @@ interface ChatSessionState {
   chatMessages: ChatMessage[];
   draftText: string;
   isStreaming: boolean;
-  errorMessage: string | null;
   connectionStatus: ChatConnectionState;
   dailyQuotaResetAtEpochSeconds: number | null;
 }
@@ -63,28 +61,27 @@ function getUserFacingErrorMessage(errorCause: unknown): string {
     return errorCause.message;
   }
 
-  if (errorCause instanceof Error && errorCause.message) {
-    return errorCause.message;
-  }
-
   return '잠시 문제가 생겼습니다. 다시 한 번 보내주세요.';
 }
 
 export function useChatSession() {
-  const [chatSessionState, setChatSessionState] = useState<ChatSessionState>(() => ({
-    chatMessages: getInitialChatMessages(),
-    draftText: '',
-    isStreaming: false,
-    errorMessage: null,
-    connectionStatus: getChatApiBaseUrl() ? 'checking' : 'unconfigured',
-    dailyQuotaResetAtEpochSeconds: null,
-  }));
+  const [chatSessionState, setChatSessionState] = useState<ChatSessionState>(
+    () => ({
+      chatMessages: getInitialChatMessages(),
+      draftText: '',
+      isStreaming: false,
+      connectionStatus: getChatApiBaseUrl() ? 'checking' : 'unconfigured',
+      dailyQuotaResetAtEpochSeconds: null,
+    }),
+  );
 
   const chatSessionStateRef = useRef(chatSessionState);
   chatSessionStateRef.current = chatSessionState;
   const streamAbortControllerRef = useRef<AbortController | null>(null);
   const isStreamActiveRef = useRef(false);
   const activeStreamSequenceRef = useRef(0);
+  const connectionCheckSequenceRef = useRef(0);
+  const connectionCheckAbortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (chatSessionState.isStreaming) {
@@ -125,8 +122,24 @@ export function useChatSession() {
     return () => window.clearTimeout(quotaResetTimeoutId);
   }, [chatSessionState.dailyQuotaResetAtEpochSeconds]);
 
+  const markConnectionOnline = useCallback(() => {
+    connectionCheckSequenceRef.current += 1;
+    connectionCheckAbortControllerRef.current?.abort();
+    connectionCheckAbortControllerRef.current = null;
+    setChatSessionState((currentState) =>
+      currentState.connectionStatus === 'online'
+        ? currentState
+        : { ...currentState, connectionStatus: 'online' },
+    );
+  }, []);
+
   const refreshConnectionStatus = useCallback(async () => {
+    const checkSequence = connectionCheckSequenceRef.current + 1;
+    connectionCheckSequenceRef.current = checkSequence;
+    connectionCheckAbortControllerRef.current?.abort();
+
     if (!getChatApiBaseUrl()) {
+      connectionCheckAbortControllerRef.current = null;
       setChatSessionState((currentState) => ({
         ...currentState,
         connectionStatus: 'unconfigured',
@@ -134,13 +147,25 @@ export function useChatSession() {
       return;
     }
 
+    const connectionCheckController = new AbortController();
+    connectionCheckAbortControllerRef.current = connectionCheckController;
     setChatSessionState((currentState) => ({
       ...currentState,
       connectionStatus: 'checking',
     }));
 
-    const isChatApiOnline = await checkChatApiHealth();
+    const isChatApiOnline = await checkChatApiHealth(
+      connectionCheckController.signal,
+    );
 
+    if (
+      connectionCheckSequenceRef.current !== checkSequence ||
+      connectionCheckController.signal.aborted
+    ) {
+      return;
+    }
+
+    connectionCheckAbortControllerRef.current = null;
     setChatSessionState((currentState) => ({
       ...currentState,
       connectionStatus: isChatApiOnline ? 'online' : 'offline',
@@ -148,23 +173,14 @@ export function useChatSession() {
   }, []);
 
   useEffect(() => {
-    if (!getChatApiBaseUrl()) {
-      return undefined;
-    }
+    void refreshConnectionStatus();
 
-    const connectionCheckController = new AbortController();
-
-    void checkChatApiHealth(connectionCheckController.signal).then((isChatApiOnline) => {
-      if (!connectionCheckController.signal.aborted) {
-        setChatSessionState((currentState) => ({
-          ...currentState,
-          connectionStatus: isChatApiOnline ? 'online' : 'offline',
-        }));
-      }
-    });
-
-    return () => connectionCheckController.abort();
-  }, []);
+    return () => {
+      connectionCheckSequenceRef.current += 1;
+      connectionCheckAbortControllerRef.current?.abort();
+      connectionCheckAbortControllerRef.current = null;
+    };
+  }, [refreshConnectionStatus]);
 
   useEffect(
     () => () => {
@@ -177,32 +193,40 @@ export function useChatSession() {
   );
 
   const updateAssistantMessage = useCallback(
-    (assistantMessageId: string, messageUpdater: (chatMessage: ChatMessage) => ChatMessage) => {
+    (
+      assistantMessageId: string,
+      messageUpdater: (chatMessage: ChatMessage) => ChatMessage,
+    ) => {
       setChatSessionState((currentState) => ({
         ...currentState,
         chatMessages: currentState.chatMessages.map((chatMessage) =>
-          chatMessage.id === assistantMessageId ? messageUpdater(chatMessage) : chatMessage,
+          chatMessage.id === assistantMessageId
+            ? messageUpdater(chatMessage)
+            : chatMessage,
         ),
       }));
     },
     [],
   );
 
-  const revealDailyQuotaNotice = useCallback((quotaStatus: ChatQuotaStatus) => {
-    setChatSessionState((currentState) => {
-      const hasQuotaNotice = currentState.chatMessages.some(
-        (chatMessage) => chatMessage.messageKind === 'daily-quota-notice',
-      );
+  const revealDailyQuotaNotice = useCallback(
+    (quotaStatus: ChatQuotaStatus) => {
+      setChatSessionState((currentState) => {
+        const hasQuotaNotice = currentState.chatMessages.some(
+          (chatMessage) => chatMessage.messageKind === 'daily-quota-notice',
+        );
 
-      return {
-        ...currentState,
-        dailyQuotaResetAtEpochSeconds: quotaStatus.resetAtEpochSeconds,
-        chatMessages: hasQuotaNotice
-          ? currentState.chatMessages
-          : [...currentState.chatMessages, createDailyQuotaNoticeMessage()],
-      };
-    });
-  }, []);
+        return {
+          ...currentState,
+          dailyQuotaResetAtEpochSeconds: quotaStatus.resetAtEpochSeconds,
+          chatMessages: hasQuotaNotice
+            ? currentState.chatMessages
+            : [...currentState.chatMessages, createDailyQuotaNoticeMessage()],
+        };
+      });
+    },
+    [],
+  );
 
   const streamAssistantResponse = useCallback(
     async (contextMessages: ChatMessage[], assistantMessageId: string) => {
@@ -222,19 +246,30 @@ export function useChatSession() {
 
       let hasReceivedTextChunk = false;
       let latestQuotaStatus: ChatQuotaStatus | undefined;
-      const streamingTextPresenter = createStreamingTextPresenter((textFrame) => {
-        if (!isCurrentStream()) {
-          return;
-        }
+      const streamingTextPresenter = createStreamingTextPresenter(
+        (textFrame) => {
+          if (!isCurrentStream()) {
+            return;
+          }
 
-        updateAssistantMessage(assistantMessageId, (chatMessage) => ({
-          ...chatMessage,
-          content: chatMessage.content + textFrame,
-          status: 'streaming',
-          statusMessage: undefined,
-          progressMessage: undefined,
-        }));
-      });
+          updateAssistantMessage(assistantMessageId, (chatMessage) => ({
+            ...chatMessage,
+            content: chatMessage.content + textFrame,
+            status: 'streaming',
+            isRetryable: undefined,
+            statusMessage: undefined,
+            progressMessage: undefined,
+          }));
+        },
+      );
+      const handlePresentationAbort = () => {
+        streamingTextPresenter.dispose();
+      };
+      streamAbortController.signal.addEventListener(
+        'abort',
+        handlePresentationAbort,
+        { once: true },
+      );
       const delayedProgressTimeoutId = window.setTimeout(() => {
         if (
           hasReceivedTextChunk ||
@@ -253,7 +288,6 @@ export function useChatSession() {
       setChatSessionState((currentState) => ({
         ...currentState,
         isStreaming: true,
-        errorMessage: null,
       }));
 
       try {
@@ -270,7 +304,15 @@ export function useChatSession() {
             streamingTextPresenter.enqueueText(textChunk);
           },
           onProgress: (streamProgress) => {
-            if (hasReceivedTextChunk || !isCurrentStream()) {
+            if (!isCurrentStream()) {
+              return;
+            }
+
+            if (streamProgress === 'ready') {
+              markConnectionOnline();
+            }
+
+            if (hasReceivedTextChunk) {
               return;
             }
 
@@ -287,21 +329,11 @@ export function useChatSession() {
         });
 
         if (!isCurrentStream()) {
+          streamingTextPresenter.dispose();
           return;
         }
 
-        streamingTextPresenter.flushText();
-        updateAssistantMessage(assistantMessageId, (chatMessage) => ({
-          ...chatMessage,
-          content:
-            chatMessage.content ||
-            '답변 내용이 비어 있습니다. 질문을 조금 바꿔 다시 보내주세요.',
-          status: chatMessage.content ? 'complete' : 'error',
-          statusMessage: undefined,
-          progressMessage: undefined,
-        }));
-      } catch (responseError) {
-        streamingTextPresenter.flushText();
+        await streamingTextPresenter.finishText();
 
         if (!isCurrentStream()) {
           return;
@@ -312,23 +344,83 @@ export function useChatSession() {
             ...chatMessage,
             content: chatMessage.content || '답변 생성을 중단했어요.',
             status: 'cancelled',
+            isRetryable: undefined,
             statusMessage: undefined,
             progressMessage: undefined,
           }));
           return;
         }
 
+        updateAssistantMessage(assistantMessageId, (chatMessage) => ({
+          ...chatMessage,
+          content: hasReceivedTextChunk
+            ? chatMessage.content
+            : '답변 내용이 비어 있습니다. 질문을 조금 바꿔 다시 보내주세요.',
+          status: hasReceivedTextChunk ? 'complete' : 'error',
+          isRetryable: hasReceivedTextChunk ? undefined : true,
+          statusMessage: undefined,
+          progressMessage: undefined,
+        }));
+      } catch (responseError) {
+        if (!isCurrentStream()) {
+          streamingTextPresenter.dispose();
+          return;
+        }
+
+        if (streamAbortController.signal.aborted) {
+          streamingTextPresenter.dispose();
+          updateAssistantMessage(assistantMessageId, (chatMessage) => ({
+            ...chatMessage,
+            content: chatMessage.content || '답변 생성을 중단했어요.',
+            status: 'cancelled',
+            isRetryable: undefined,
+            statusMessage: undefined,
+            progressMessage: undefined,
+          }));
+          return;
+        }
+
+        await streamingTextPresenter.finishText();
+
+        if (!isCurrentStream()) {
+          return;
+        }
+
         const userFacingErrorMessage = getUserFacingErrorMessage(responseError);
         const responseErrorCode =
-          responseError instanceof ChatApiError ? responseError.errorCode : 'UNKNOWN_ERROR';
-        const isDailyQuotaExceeded = responseErrorCode === 'DAILY_QUOTA_EXCEEDED';
+          responseError instanceof ChatApiError
+            ? responseError.errorCode
+            : 'UNKNOWN_ERROR';
+        const isDailyQuotaExceeded =
+          responseErrorCode === 'DAILY_QUOTA_EXCEEDED';
+        const isResponseRetryable =
+          responseError instanceof ChatApiError
+            ? responseError.isRetryable
+            : true;
+
+        if (responseErrorCode === 'NETWORK_ERROR') {
+          setChatSessionState((currentState) => ({
+            ...currentState,
+            connectionStatus: 'offline',
+          }));
+        } else if (responseErrorCode === 'API_NOT_CONFIGURED') {
+          setChatSessionState((currentState) => ({
+            ...currentState,
+            connectionStatus: 'unconfigured',
+          }));
+        }
 
         updateAssistantMessage(assistantMessageId, (chatMessage) => ({
           ...chatMessage,
-          content: hasReceivedTextChunk ? chatMessage.content : userFacingErrorMessage,
+          content: hasReceivedTextChunk
+            ? chatMessage.content
+            : userFacingErrorMessage,
           status: 'error',
           errorCode: responseErrorCode,
-          statusMessage: hasReceivedTextChunk ? userFacingErrorMessage : undefined,
+          isRetryable: isResponseRetryable,
+          statusMessage: hasReceivedTextChunk
+            ? userFacingErrorMessage
+            : undefined,
           progressMessage: undefined,
           messageKind: isDailyQuotaExceeded
             ? 'daily-quota-notice'
@@ -341,14 +433,13 @@ export function useChatSession() {
             dailyQuotaResetAtEpochSeconds:
               getQuotaResetAtEpochSeconds(responseError),
           }));
-        } else {
-          setChatSessionState((currentState) => ({
-            ...currentState,
-            errorMessage: userFacingErrorMessage,
-          }));
         }
       } finally {
         window.clearTimeout(delayedProgressTimeoutId);
+        streamAbortController.signal.removeEventListener(
+          'abort',
+          handlePresentationAbort,
+        );
         streamingTextPresenter.dispose();
 
         if (isCurrentStream()) {
@@ -365,13 +456,15 @@ export function useChatSession() {
         }
       }
     },
-    [revealDailyQuotaNotice, updateAssistantMessage],
+    [markConnectionOnline, revealDailyQuotaNotice, updateAssistantMessage],
   );
 
   const sendChatMessage = useCallback(
     (messageTextOverride?: string) => {
       const currentSessionState = chatSessionStateRef.current;
-      const messageText = (messageTextOverride ?? currentSessionState.draftText)
+      const messageText = (
+        messageTextOverride ?? currentSessionState.draftText
+      )
         .trim()
         .slice(0, MAX_MESSAGE_INPUT_LENGTH);
 
@@ -388,13 +481,15 @@ export function useChatSession() {
         status: 'streaming',
         progressMessage: '서버에 연결 중…',
       });
-      const contextMessages = [...currentSessionState.chatMessages, userMessage];
+      const contextMessages = [
+        ...currentSessionState.chatMessages,
+        userMessage,
+      ];
 
       setChatSessionState((currentState) => ({
         ...currentState,
         chatMessages: [...contextMessages, assistantMessage],
         draftText: '',
-        errorMessage: null,
       }));
 
       void streamAssistantResponse(contextMessages, assistantMessage.id);
@@ -414,14 +509,24 @@ export function useChatSession() {
 
       const assistantMessageIndex = currentSessionState.chatMessages.findIndex(
         (chatMessage) =>
-          chatMessage.id === assistantMessageId && chatMessage.role === 'assistant',
+          chatMessage.id === assistantMessageId &&
+          chatMessage.role === 'assistant',
       );
 
       if (assistantMessageIndex <= 0) {
         return;
       }
 
-      const contextMessages = currentSessionState.chatMessages.slice(0, assistantMessageIndex);
+      const retryTargetMessage =
+        currentSessionState.chatMessages[assistantMessageIndex];
+      if (retryTargetMessage?.isRetryable === false) {
+        return;
+      }
+
+      const contextMessages = currentSessionState.chatMessages.slice(
+        0,
+        assistantMessageIndex,
+      );
       const latestContextMessage = contextMessages.at(-1);
       if (latestContextMessage?.role !== 'user') {
         return;
@@ -435,10 +540,12 @@ export function useChatSession() {
       setChatSessionState((currentState) => ({
         ...currentState,
         chatMessages: [...contextMessages, replacementAssistantMessage],
-        errorMessage: null,
       }));
 
-      void streamAssistantResponse(contextMessages, replacementAssistantMessage.id);
+      void streamAssistantResponse(
+        contextMessages,
+        replacementAssistantMessage.id,
+      );
     },
     [streamAssistantResponse],
   );
@@ -465,7 +572,6 @@ export function useChatSession() {
         ],
         draftText: '',
         isStreaming: false,
-        errorMessage: null,
       };
     });
   }, []);
@@ -474,13 +580,6 @@ export function useChatSession() {
     setChatSessionState((currentState) => ({
       ...currentState,
       draftText: nextDraftText.slice(0, MAX_MESSAGE_INPUT_LENGTH),
-    }));
-  }, []);
-
-  const dismissErrorMessage = useCallback(() => {
-    setChatSessionState((currentState) => ({
-      ...currentState,
-      errorMessage: null,
     }));
   }, []);
 
@@ -496,6 +595,5 @@ export function useChatSession() {
     stopAssistantResponse,
     resetConversation,
     refreshConnectionStatus,
-    dismissErrorMessage,
   };
 }

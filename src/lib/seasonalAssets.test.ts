@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CHAT_SKIN_IDS } from '@/types/skin';
 
 interface ImageHarness {
   requestedUrls: string[];
@@ -57,21 +56,9 @@ afterEach(() => {
 });
 
 describe('seasonal asset preloading', () => {
-  it('loads the active skin immediately and the remaining skins later', async () => {
+  it('loads only the active skin during application startup', async () => {
     const imageHarness = createImageHarness();
-    let scheduledPreload: (() => void) | undefined;
-    const clearTimeout = vi.fn();
     vi.stubGlobal('Image', imageHarness.ImageConstructor);
-    vi.stubGlobal('navigator', {
-      connection: { saveData: false, effectiveType: '4g' },
-    });
-    vi.stubGlobal('window', {
-      setTimeout: (callback: () => void) => {
-        scheduledPreload = callback;
-        return 91;
-      },
-      clearTimeout,
-    });
     const seasonalAssets = await import('./seasonalAssets');
 
     const cancelPreload = seasonalAssets.scheduleSeasonalAssetPreload('spring');
@@ -79,36 +66,23 @@ describe('seasonal asset preloading', () => {
     expect(imageHarness.requestedUrls).toEqual(
       seasonalAssets.getSeasonalSkinAssetUrls('spring'),
     );
-
-    scheduledPreload?.();
-
-    expect(new Set(imageHarness.requestedUrls).size).toBe(
-      CHAT_SKIN_IDS.length * 2,
-    );
-
     cancelPreload();
-    expect(clearTimeout).toHaveBeenCalledWith(91);
   });
 
-  it('does not preload inactive skins when data saver is enabled', async () => {
+  it('loads another skin when it is explicitly requested', async () => {
     const imageHarness = createImageHarness();
-    const setTimeout = vi.fn(() => 29);
     vi.stubGlobal('Image', imageHarness.ImageConstructor);
-    vi.stubGlobal('navigator', {
-      connection: { saveData: true, effectiveType: '4g' },
-    });
-    vi.stubGlobal('window', {
-      setTimeout,
-      clearTimeout: vi.fn(),
-    });
     const seasonalAssets = await import('./seasonalAssets');
 
     seasonalAssets.scheduleSeasonalAssetPreload('winter');
+    seasonalAssets.preloadSeasonalSkinAssets('summer');
 
-    expect(imageHarness.requestedUrls).toEqual(
-      seasonalAssets.getSeasonalSkinAssetUrls('winter'),
+    expect(new Set(imageHarness.requestedUrls)).toEqual(
+      new Set([
+        ...seasonalAssets.getSeasonalSkinAssetUrls('winter'),
+        ...seasonalAssets.getSeasonalSkinAssetUrls('summer'),
+      ]),
     );
-    expect(setTimeout).not.toHaveBeenCalled();
   });
 
   it('allows an asset to be requested again after a preload error', async () => {
@@ -117,6 +91,7 @@ describe('seasonal asset preloading', () => {
     const seasonalAssets = await import('./seasonalAssets');
     const [failedAssetUrl] = seasonalAssets.getSeasonalSkinAssetUrls('autumn');
 
+    seasonalAssets.preloadSeasonalSkinAssets('autumn');
     seasonalAssets.preloadSeasonalSkinAssets('autumn');
     imageHarness.emitError(failedAssetUrl!);
     seasonalAssets.preloadSeasonalSkinAssets('autumn');

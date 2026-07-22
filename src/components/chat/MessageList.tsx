@@ -1,6 +1,9 @@
 import { ArrowDown } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { formatConversationDate } from '@/lib/chat';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  formatConversationDate,
+  getConversationDateKey,
+} from '@/lib/chat';
 import {
   cancelVisualFrame,
   getMotionAwareScrollBehavior,
@@ -35,6 +38,45 @@ function scrollViewportTo(
   }
 }
 
+function getLiveStatusMessage(
+  visibleMessages: ChatMessage[],
+  isStreaming: boolean,
+): string {
+  let latestAssistantMessage: ChatMessage | undefined;
+
+  for (let messageIndex = visibleMessages.length - 1; messageIndex >= 0; messageIndex -= 1) {
+    const candidateMessage = visibleMessages[messageIndex];
+    if (candidateMessage?.role === 'assistant') {
+      latestAssistantMessage = candidateMessage;
+      break;
+    }
+  }
+
+  if (!latestAssistantMessage) {
+    return '';
+  }
+
+  if (isStreaming || latestAssistantMessage.status === 'streaming') {
+    return latestAssistantMessage.progressMessage ?? '답변 작성 중…';
+  }
+
+  if (latestAssistantMessage.status === 'complete') {
+    return '답변이 완료됐어요.';
+  }
+
+  if (latestAssistantMessage.status === 'error') {
+    return latestAssistantMessage.isRetryable === false
+      ? '답변을 완료하지 못했어요.'
+      : '답변 생성에 실패했어요. 다시 시도할 수 있어요.';
+  }
+
+  if (latestAssistantMessage.status === 'cancelled') {
+    return '답변 생성을 중단했어요.';
+  }
+
+  return '';
+}
+
 export function MessageList({
   activeSkinId,
   chatMessages,
@@ -53,6 +95,10 @@ export function MessageList({
   );
   const hasConversationMessages = visibleMessages.length > 0;
   const latestMessageContentLength = chatMessages.at(-1)?.content.length ?? 0;
+  const liveStatusMessage = getLiveStatusMessage(
+    visibleMessages,
+    isStreaming,
+  );
 
   const hideJumpButton = useCallback(() => {
     setIsJumpButtonVisible((isVisible) => (isVisible ? false : isVisible));
@@ -151,25 +197,33 @@ export function MessageList({
     }
 
     const distanceFromLatestMessage =
-      messageViewport.scrollHeight - messageViewport.scrollTop - messageViewport.clientHeight;
+      messageViewport.scrollHeight -
+      messageViewport.scrollTop -
+      messageViewport.clientHeight;
     const isViewportPinned = distanceFromLatestMessage < 96;
     isViewportPinnedRef.current = isViewportPinned;
     setIsJumpButtonVisible((isVisible) => {
       const shouldShowJumpButton = !isViewportPinned;
-      return isVisible === shouldShowJumpButton ? isVisible : shouldShowJumpButton;
+      return isVisible === shouldShowJumpButton
+        ? isVisible
+        : shouldShowJumpButton;
     });
   };
 
   return (
     <div className="message-area relative min-h-0 flex-1 overflow-hidden">
       <SeasonalScene key={activeSkinId} skinId={activeSkinId} />
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {liveStatusMessage}
+      </p>
       <div
         ref={messageViewportRef}
         onScroll={handleViewportScroll}
         className="chat-wallpaper relative z-[1] h-full overflow-y-auto overscroll-contain px-4 py-4 sm:px-7 sm:py-6"
         role="log"
-        aria-live="polite"
-        aria-relevant="additions text"
+        aria-label="대화 내용"
+        aria-live="off"
+        aria-relevant="additions"
         aria-busy={isStreaming}
       >
         <div
@@ -186,22 +240,42 @@ export function MessageList({
             />
           ) : (
             <>
-              <div className="date-chip self-center px-3 py-1.5">
-                {formatConversationDate()}
-              </div>
+              {visibleMessages.map((chatMessage, messageIndex) => {
+                const currentDateKey = getConversationDateKey(
+                  chatMessage.createdAt,
+                );
+                const previousDateKey =
+                  messageIndex > 0
+                    ? getConversationDateKey(
+                        visibleMessages[messageIndex - 1]?.createdAt ?? '',
+                      )
+                    : '';
+                const shouldShowDateChip =
+                  currentDateKey.length > 0 &&
+                  currentDateKey !== previousDateKey;
 
-              {visibleMessages.map((chatMessage, messageIndex) => (
-                <MessageBubble
-                  key={chatMessage.id}
-                  chatMessage={chatMessage}
-                  canRetry={
-                    messageIndex === visibleMessages.length - 1 &&
-                    !isStreaming &&
-                    chatMessage.messageKind !== 'daily-quota-notice'
-                  }
-                  onRetryMessage={onRetryMessage}
-                />
-              ))}
+                return (
+                  <Fragment key={chatMessage.id}>
+                    {shouldShowDateChip ? (
+                      <div className="date-chip self-center px-3 py-1.5">
+                        {formatConversationDate(
+                          new Date(chatMessage.createdAt),
+                        )}
+                      </div>
+                    ) : null}
+                    <MessageBubble
+                      chatMessage={chatMessage}
+                      canRetry={
+                        messageIndex === visibleMessages.length - 1 &&
+                        !isStreaming &&
+                        chatMessage.messageKind !== 'daily-quota-notice' &&
+                        chatMessage.isRetryable !== false
+                      }
+                      onRetryMessage={onRetryMessage}
+                    />
+                  </Fragment>
+                );
+              })}
 
               <div className="h-2" aria-hidden="true" />
             </>

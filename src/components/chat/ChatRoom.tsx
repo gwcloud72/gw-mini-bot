@@ -13,7 +13,6 @@ export function ChatRoom() {
     chatMessages,
     draftText,
     isStreaming,
-    errorMessage,
     connectionStatus,
     isDailyQuotaExhausted,
     setDraftText,
@@ -22,7 +21,6 @@ export function ChatRoom() {
     stopAssistantResponse,
     resetConversation,
     refreshConnectionStatus,
-    dismissErrorMessage,
   } = useChatSession();
   const {
     activeSkinId,
@@ -65,9 +63,7 @@ export function ChatRoom() {
 
         <ConnectionBanner
           connectionStatus={connectionStatus}
-          errorMessage={errorMessage}
           onRetryConnection={handleRetryConnection}
-          onDismissError={dismissErrorMessage}
         />
 
         <MessageList

@@ -5,7 +5,10 @@ import { CHATBOT_DISPLAY_NAME } from '@/constants/chat';
 import { formatMessageTime } from '@/lib/chat';
 import type { ChatMessage } from '@/types/chat';
 import { MessageContent } from './MessageContent';
+import { StreamingMessageContent } from './StreamingMessageContent';
 import { TypingIndicator } from './TypingIndicator';
+
+const CANCELLED_RESPONSE_MESSAGE = '답변 생성을 중단했어요.';
 
 interface MessageBubbleProps {
   chatMessage: ChatMessage;
@@ -121,12 +124,7 @@ export const MessageBubble = memo(function MessageBubble({
             ) : isUserMessage ? (
               <p className="message-copy whitespace-pre-wrap">{chatMessage.content}</p>
             ) : chatMessage.status === 'streaming' ? (
-              <>
-                <p className="message-copy whitespace-pre-wrap">
-                  {chatMessage.content}
-                </p>
-                <span className="streaming-cursor" aria-hidden="true" />
-              </>
+              <StreamingMessageContent messageContent={chatMessage.content} />
             ) : (
               <MessageContent messageContent={chatMessage.content} />
             )}
@@ -149,9 +147,11 @@ export const MessageBubble = memo(function MessageBubble({
             </p>
           )}
 
-          {!isUserMessage && chatMessage.status === 'cancelled' && (
-            <p className="message-status mt-1.5 px-1">생성을 중단했어요</p>
-          )}
+          {!isUserMessage &&
+            chatMessage.status === 'cancelled' &&
+            chatMessage.content !== CANCELLED_RESPONSE_MESSAGE && (
+              <p className="message-status mt-1.5 px-1">생성을 중단했어요</p>
+            )}
         </div>
 
         <div
@@ -179,9 +179,19 @@ export const MessageBubble = memo(function MessageBubble({
                 )}
               </button>
             )}
-          <time className="message-time whitespace-nowrap" dateTime={chatMessage.createdAt}>
-            {formattedMessageTime}
-          </time>
+          {!isUserMessage && chatMessage.status === 'streaming' ? (
+            <span className="message-live-status inline-flex items-center gap-1.5 whitespace-nowrap">
+              <span className="message-live-dot" aria-hidden="true" />
+              작성 중
+            </span>
+          ) : (
+            <time
+              className="message-time whitespace-nowrap"
+              dateTime={chatMessage.createdAt}
+            >
+              {formattedMessageTime}
+            </time>
+          )}
         </div>
       </div>
     </article>
