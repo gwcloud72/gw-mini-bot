@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act } from 'react';
+import { act, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,21 +43,52 @@ vi.mock('@/services/chatApi', () => {
 
 import { useChatSession } from './useChatSession';
 
-let testRoot: Root | undefined;
-let latestSession: ReturnType<typeof useChatSession> | undefined;
+type ChatSession = ReturnType<typeof useChatSession>;
 
-function ChatSessionProbe() {
-  latestSession = useChatSession();
+interface ChatSessionProbeProps {
+  onSessionChange: (chatSession: ChatSession) => void;
+}
+
+interface ChatSessionHarness {
+  getCurrentSession: () => ChatSession;
+}
+
+let testRoot: Root | undefined;
+
+function ChatSessionProbe({ onSessionChange }: ChatSessionProbeProps) {
+  const chatSession = useChatSession();
+
+  useEffect(() => {
+    onSessionChange(chatSession);
+  }, [chatSession, onSessionChange]);
+
   return null;
 }
 
-async function renderChatSession(): Promise<void> {
+async function renderChatSession(): Promise<ChatSessionHarness> {
+  let currentSession: ChatSession | undefined;
+  const handleSessionChange = (nextSession: ChatSession) => {
+    currentSession = nextSession;
+  };
   const rootElement = document.createElement('div');
   document.body.appendChild(rootElement);
   testRoot = createRoot(rootElement);
+
   await act(async () => {
-    testRoot?.render(<ChatSessionProbe />);
+    testRoot?.render(
+      <ChatSessionProbe onSessionChange={handleSessionChange} />,
+    );
   });
+
+  return {
+    getCurrentSession: () => {
+      if (!currentSession) {
+        throw new Error('대화 세션 테스트 상태가 준비되지 않았습니다.');
+      }
+
+      return currentSession;
+    },
+  };
 }
 
 async function flushAsyncState(): Promise<void> {
@@ -70,7 +101,6 @@ async function flushAsyncState(): Promise<void> {
 beforeEach(() => {
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean })
     .IS_REACT_ACT_ENVIRONMENT = true;
-  latestSession = undefined;
   serviceMocks.checkChatApiHealth.mockReset();
   serviceMocks.streamChatResponse.mockReset();
   window.localStorage.clear();
@@ -101,23 +131,23 @@ describe('useChatSession connection checks', () => {
       },
     );
 
-    await renderChatSession();
-    expect(latestSession?.connectionStatus).toBe('checking');
+    const chatSessionHarness = await renderChatSession();
+    expect(chatSessionHarness.getCurrentSession().connectionStatus).toBe('checking');
 
     await act(async () => {
-      latestSession?.sendChatMessage('연결 성공 질문');
+      chatSessionHarness.getCurrentSession().sendChatMessage('연결 성공 질문');
     });
     await flushAsyncState();
-    expect(latestSession?.connectionStatus).toBe('online');
+    expect(chatSessionHarness.getCurrentSession().connectionStatus).toBe('online');
 
     resolveInitialHealthCheck(false);
     await flushAsyncState();
-    expect(latestSession?.connectionStatus).toBe('online');
+    expect(chatSessionHarness.getCurrentSession().connectionStatus).toBe('online');
   });
 
   it('ignores an older manual health result after a newer check succeeds', async () => {
     serviceMocks.checkChatApiHealth.mockResolvedValueOnce(true);
-    await renderChatSession();
+    const chatSessionHarness = await renderChatSession();
     await flushAsyncState();
 
     let resolveOlderCheck!: (isOnline: boolean) => void;
@@ -136,14 +166,14 @@ describe('useChatSession connection checks', () => {
           }),
       );
 
-    void latestSession?.refreshConnectionStatus();
-    void latestSession?.refreshConnectionStatus();
+    void chatSessionHarness.getCurrentSession().refreshConnectionStatus();
+    void chatSessionHarness.getCurrentSession().refreshConnectionStatus();
     resolveNewerCheck(true);
     await flushAsyncState();
-    expect(latestSession?.connectionStatus).toBe('online');
+    expect(chatSessionHarness.getCurrentSession().connectionStatus).toBe('online');
 
     resolveOlderCheck(false);
     await flushAsyncState();
-    expect(latestSession?.connectionStatus).toBe('online');
+    expect(chatSessionHarness.getCurrentSession().connectionStatus).toBe('online');
   });
 });
