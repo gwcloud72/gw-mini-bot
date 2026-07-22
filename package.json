@@ -33,7 +33,7 @@
     "check:vite": "npm run check:vite-output && npm run check:vite-preview"
   },
   "dependencies": {
-    "lucide-react": "^1.24.0",
+    "lucide-react": "^1.25.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-markdown": "^10.1.0",
